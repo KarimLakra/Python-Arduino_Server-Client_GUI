@@ -14,7 +14,7 @@ class Window(QDialog):
         self.InitWindow()
 
     def InitWindow(self):
-        self.setWindowIcon(QtGui.QIcon("home.svg"))
+        self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Server control")
         self.setGeometry(500, 200, 300, 250)
 
@@ -43,7 +43,7 @@ class Window(QDialog):
         hboxlayout = QHBoxLayout()
 
         button = QPushButton("Run server", self)
-        button.setIcon(QtGui.QIcon("connect_server.png"))
+        button.setIcon(QtGui.QIcon("StartServer.png"))
         button.setIconSize(QtCore.QSize(40,40))
         button.setToolTip("<h2>Run</h2>the server")    #tooltip with HTML tag
         button.setMinimumHeight(40)
@@ -51,7 +51,7 @@ class Window(QDialog):
         hboxlayout.addWidget(button)
 
         button1 = QPushButton("Stop server", self)
-        button1.setIcon(QtGui.QIcon("disconnect_server.jpg"))
+        button1.setIcon(QtGui.QIcon("StopServer.png"))
         button1.setIconSize(QtCore.QSize(40,40))
         button1.setToolTip("<h2>Stop</h2> the server")
         button1.setMinimumHeight(40)
@@ -59,7 +59,7 @@ class Window(QDialog):
         hboxlayout.addWidget(button1)
 
         button2 = QPushButton("Quit", self)
-        button2.setIcon(QtGui.QIcon("quit.jpg"))
+        button2.setIcon(QtGui.QIcon("Quit.png"))
         button2.setIconSize(QtCore.QSize(40,40))
         button2.setToolTip("<h2>Quit</h2> this application")
         button2.setMinimumHeight(40)
@@ -69,16 +69,8 @@ class Window(QDialog):
         self.groupBox.setLayout(hboxlayout)
 
     def IPADD(self):
-        ip=socket.gethostbyname(socket.gethostname())
-
-        # ip = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # ip.connect(("8.8.8.8", 80))
-        # print(ip.getsockname()[0])
-
-        # import os, re
-        # import subprocess
-        # proc = subprocess.check_output("ipconfig" ).decode('utf-8')
-        # print (proc)
+        proc = subprocess.check_output("ipconfig" ).decode('utf-8')
+        print (proc)
 
         #print(ip)
         #self.label.setText("IP:%s "% (ip))
