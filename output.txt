@@ -1,4 +1,0 @@
-waiting for a connection...
-connection from 192.168.1.21:49153
-test
-je suis un soir
