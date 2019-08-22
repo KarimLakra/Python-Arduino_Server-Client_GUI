@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QPushButton, QDialog, QGroupBox, QHBoxLayout, QVBoxLayout
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import QRect
+
+# import getIP_List_func
+from getIP_List_func import SerachAdapter as Form
 import sys
 import os
-from PyQt5 import QtGui
-from PyQt5.QtCore import QRect
-from PyQt5 import QtCore
-import subprocess
 import socket
+import subprocess
 
 class Window(QDialog):
     def __init__(self):
@@ -69,22 +71,23 @@ class Window(QDialog):
         self.groupBox.setLayout(hboxlayout)
 
     def IPADD(self):
-        proc = subprocess.check_output("ipconfig" ).decode('utf-8')
-        print (proc)
-
-        #print(ip)
-        #self.label.setText("IP:%s "% (ip))
+        res = 0
+        sIP = QtWidgets.QDialog()
+        sIP.ui = Form()
+        sIP.ui.setupDialog(sIP)
+        sIP.exec_()
+        # sIP.show()
 
 
     def SConnect(self):
         print("Server is running")
-        #os.system("ArduinoSocket.py 1")
         with open('output.txt', 'w') as f:
             self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py"], stdout = f)
 
     def SDisconnect(self):
         self.p.terminate()
         print("Server Disconnected")
+
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)
