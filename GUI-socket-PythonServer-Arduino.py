@@ -1,13 +1,15 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QPushButton, QDialog, QGroupBox, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QPushButton, QDialog, \
+QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QDialogButtonBox, QListView, QLineEdit
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QRect
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-# import getIP_List_func
-from getIP_List_func import SerachAdapter as Form
 import sys
 import os
 import socket
 import subprocess
+import netifaces
+import getIP_List_func
 
 class Window(QDialog):
     def __init__(self):
@@ -25,15 +27,21 @@ class Window(QDialog):
         vbox = QVBoxLayout()
         vbox.addWidget(self.groupBox)
 
+        self.ServerIP = QLineEdit(self)
+        # self.ServerIP.move(20,20)
+        self.ServerIP.resize(280,40)
+        vbox.addWidget(self.ServerIP)
+
         self.label = QLabel(self)
         self.label.setFont(QtGui.QFont("Sanserif", 15))
         vbox.addWidget(self.label)
 
-        buttonDebug = QPushButton("Find Server IP", self)
-        buttonDebug.setIconSize(QtCore.QSize(40,40))
-        buttonDebug.setMinimumHeight(40)
-        buttonDebug.clicked.connect(self.IPADD)
-        vbox.addWidget(buttonDebug)
+        buttonSerachAdapter = QPushButton("Search Network Adapters", self)
+        buttonSerachAdapter.setIconSize(QtCore.QSize(40,40))
+        buttonSerachAdapter.setMinimumHeight(40)
+        buttonSerachAdapter.clicked.connect(self.ChooseIP)
+        # buttonSerachAdapter.clicked.connect(self.IPADD)
+        vbox.addWidget(buttonSerachAdapter)
 
         self.setLayout(vbox)
 
@@ -70,13 +78,14 @@ class Window(QDialog):
 
         self.groupBox.setLayout(hboxlayout)
 
-    def IPADD(self):
-        res = 0
-        sIP = QtWidgets.QDialog()
-        sIP.ui = Form()
-        sIP.ui.setupDialog(sIP)
-        sIP.exec_()
-        # sIP.show()
+
+    def ChooseIP(self):
+        dlg = getIP_List_func.CustomDialog(self)
+        if dlg.exec_():
+            # print(dlg.IPselected)
+            self.label.setText(dlg.IPselected)
+        # else:
+        #     print("Cancel!")
 
 
     def SConnect(self):

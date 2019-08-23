@@ -1,80 +1,52 @@
-# https://github.com/qingfengxia/Cfd/blob/master/FoamCaseBuilder/ChoiceDialog.py
-
-# https://stackoverflow.com/questions/30080927/pop-up-dialog-from-one-button-on-the-main-window-pyqt5
-# from PyQt5.QtWidgets import QMainWindow, QApplication, QGroupBox, QPushButton, QHBoxLayout, QVBoxLayout, QBoxLayout, QListView, QDialog
-from PyQt5.QtWidgets import  QBoxLayout, QGroupBox, QListView, QVBoxLayout, QDialog, QDialogButtonBox
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5 import QtCore, QtGui, QtWidgets
 import netifaces
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QGroupBox, QBoxLayout, QListView
+from PyQt5 import QtCore
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-# class SerachAdapter(QtWidgets.QWidget):
-class SerachAdapter(QDialog):
-    def setupDialog(self, Dialog):
-        Dialog.setObjectName("Dialog")
-        Dialog.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
-        Dialog.resize(500, 200)
-        self.VL = QtWidgets.QVBoxLayout(Dialog)
-        self.VL.setObjectName("VL")
+class CustomDialog(QDialog):
 
-        self.HL0 = QtWidgets.QHBoxLayout()
-        self.HL0.setObjectName("HL0")
+    def __init__(self, *args, **kwargs):
+        super(CustomDialog, self).__init__(*args, **kwargs)
 
-        group = QGroupBox(Dialog)
+        self.IPselected = ""
+
+        self.setWindowTitle("Choose an IP Address")
+        self.setGeometry(500, 200, 500, 200)
+
+        QBtn = QDialogButtonBox.Apply | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.clicked.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+
+        group = QGroupBox()
         box = QBoxLayout(QBoxLayout.TopToBottom)
         group.setLayout(box)
         group.setTitle("Adapters list")
-        self.HL0.addWidget(group)
+        self.layout.addWidget(group)
 
-        view = QListView(Dialog)
+        view = QListView(self)
         self.model = QStandardItemModel()
-        self.listAddrs()
+        view.clicked.connect(self.on_treeView_clicked)
+
+        self.list_IP = self.listAddrs()
 
         view.setModel(self.model)
         box.addWidget(view)
 
-        self.VL.addLayout(self.HL0)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
 
-        self.HL1 = QtWidgets.QHBoxLayout()
-        self.HL1.setObjectName("HL1")
-
-        self.VL.addLayout(self.HL1)
-
-        self.HL2 = QtWidgets.QHBoxLayout()
-        self.HL2.setObjectName("HL2")
-
-        self.SelectButton = QtWidgets.QPushButton(Dialog)
-        self.SelectButton.setObjectName("SelectButton")
-        self.HL2.addWidget(self.SelectButton)
-
-        self.CancelButton = QtWidgets.QPushButton(Dialog)
-        self.CancelButton.setObjectName("CancelButton")
-        self.HL2.addWidget(self.CancelButton)
-        self.VL.addLayout(self.HL2)
-
-        self.retranslateUi(Dialog)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
-
-        # connect the two functions
-        self.SelectButton.clicked.connect(self.accept)
-        self.CancelButton.clicked.connect(self.reject())
-
-
-    def retranslateUi(self, Dialog):
-        _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Select Ip address"))
-        self.SelectButton.setText(_translate("Dialog", "Select"))
-        self.CancelButton.setText(_translate("Dialog", "Cancel"))
-
-    # 2 sample functions
-    def accept(self):
-        print("yes")
-
-    def cancel(self):
-        self.reject()
-        print("exit")
-
+    @QtCore.pyqtSlot(QtCore.QModelIndex)
+    def on_treeView_clicked(self, index):
+        # print ('selected item index found at %s with data: %s' % (index.row(), str(index.data())))
+        # print(self.list_IP[index.row()])
+        self.IPselected = self.list_IP[index.row()]
 
     def listAddrs(self):
+        listIP = []
         ad = netifaces.interfaces()
         for adpt in ad:
             # print(netifaces.ifaddresses(adpt))
@@ -85,3 +57,5 @@ class SerachAdapter(QDialog):
                 self.model.appendRow(QStandardItem('addr: ' + adapt['addr'] +
                 '  netmask: ' + adapt['netmask'] +
                 '  broadcast: ' + adapt['broadcast']))
+                listIP.append(adapt['addr'])
+        return listIP
