@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QPushButton, QDialog, \
-QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QDialogButtonBox, QListView, QLineEdit
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton, QDialog,
+QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QDialogButtonBox, QListView, QLineEdit)
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QRect
+from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 import sys
@@ -19,18 +19,15 @@ class Window(QDialog):
 
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
-        self.setWindowTitle("Server control")
+        self.setWindowTitle("Socket Server")
         self.setGeometry(500, 200, 300, 250)
 
-        self.createLayout()
+        self.createLayout1()
+        self.createLayout2()
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.groupBox)
-
-        self.ServerIP = QLineEdit(self)
-        # self.ServerIP.move(20,20)
-        self.ServerIP.resize(280,40)
-        vbox.addWidget(self.ServerIP)
+        vbox.addWidget(self.groupBox1)
 
         self.label = QLabel(self)
         self.label.setFont(QtGui.QFont("Sanserif", 15))
@@ -44,13 +41,11 @@ class Window(QDialog):
         vbox.addWidget(buttonSerachAdapter)
 
         self.setLayout(vbox)
-
         self.show()
 
-    def createLayout(self):
-        self.groupBox = QGroupBox("Python Socket server - Arduino")
-
+    def createLayout1(self):
         hboxlayout = QHBoxLayout()
+        self.groupBox = QGroupBox("Python Socket server - Arduino")
 
         button = QPushButton("Run server", self)
         button.setIcon(QtGui.QIcon("StartServer.png"))
@@ -78,12 +73,41 @@ class Window(QDialog):
 
         self.groupBox.setLayout(hboxlayout)
 
+    def createLayout2(self):
+        vboxIP_Port = QVBoxLayout()
+        hboxIP = QHBoxLayout()
+        hboxPort = QHBoxLayout()
+
+        self.groupBox1 = QGroupBox("IP && Port:")
+
+        self.label0 = QLabel(self)
+        self.label0.setText("Server IP:")
+        self.ServerIP = QLineEdit(self)
+        self.ServerIP.setFixedWidth(200)
+        # hboxIP.addWidget(self.label0, Qt.AlignLeft)
+        hboxIP.addWidget(self.label0)
+        hboxIP.addWidget(self.ServerIP)
+        hboxIP.addStretch(1)
+
+        self.label1 = QLabel(self)
+        self.label1.setText("Port:")
+        self.PortN = QLineEdit(self)
+        self.PortN.setFixedWidth(100)
+        hboxPort.addWidget(self.label1)
+        hboxPort.addWidget(self.PortN)
+        hboxPort.addStretch(1)
+
+        vboxIP_Port.addLayout(hboxIP)
+        vboxIP_Port.addLayout(hboxPort)
+
+        self.groupBox1.setLayout(vboxIP_Port)
 
     def ChooseIP(self):
         dlg = getIP_List_func.CustomDialog(self)
         if dlg.exec_():
             # print(dlg.IPselected)
-            self.label.setText(dlg.IPselected)
+            # self.label.setText(dlg.IPselected)
+            self.ServerIP.setText(dlg.IPselected)
         # else:
         #     print("Cancel!")
 
