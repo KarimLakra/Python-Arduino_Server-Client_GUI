@@ -6,6 +6,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 import sys
 import os
+import signal
 import socket
 import subprocess
 import netifaces
@@ -17,6 +18,7 @@ class Window(QDialog):
 
         self.InitWindow()
 
+        # self.IPSel = ''
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
@@ -84,6 +86,7 @@ class Window(QDialog):
         self.label0.setText("Server IP:")
         self.ServerIP = QLineEdit(self)
         self.ServerIP.setFixedWidth(200)
+        self.ServerIP.setText('192.168.1.2')
         # hboxIP.addWidget(self.label0, Qt.AlignLeft)
         hboxIP.addWidget(self.label0)
         hboxIP.addWidget(self.ServerIP)
@@ -93,6 +96,7 @@ class Window(QDialog):
         self.label1.setText("Port:")
         self.PortN = QLineEdit(self)
         self.PortN.setFixedWidth(100)
+        self.PortN.setText('65432')
         hboxPort.addWidget(self.label1)
         hboxPort.addWidget(self.PortN)
         hboxPort.addStretch(1)
@@ -107,18 +111,24 @@ class Window(QDialog):
         if dlg.exec_():
             # print(dlg.IPselected)
             # self.label.setText(dlg.IPselected)
-            self.ServerIP.setText(dlg.IPselected)
+            self.IPSel = dlg.IPselected
+            self.ServerIP.setText(self.IPSel)
         # else:
         #     print("Cancel!")
 
 
     def SConnect(self):
         print("Server is running")
-        with open('output.txt', 'w') as f:
-            self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py"], stdout = f)
+        # with open('output.txt', 'w') as f:
+            # self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py","name1","name2","name3"] , stdout = f)
+        ipServ = self.ServerIP.text()
+        portN = self.PortN.text()
+
+        self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py", ipServ, portN] , shell = True)
 
     def SDisconnect(self):
-        self.p.terminate()
+        cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /f /pid %a'
+        os.system(cmd)
         print("Server Disconnected")
 
 
