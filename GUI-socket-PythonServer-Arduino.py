@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton, QDialog,
-QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QDialogButtonBox, QListView, QLineEdit)
+QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QDialogButtonBox, QListView, QLineEdit, QScrollArea)
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtCore import QRect, Qt, QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 import sys
@@ -26,24 +26,45 @@ class Window(QDialog):
 
         self.createLayout1()
         self.createLayout2()
+        self.createLayout3()
+        self.createLayout4()
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.groupBox)
         vbox.addWidget(self.groupBox1)
+        vbox.addWidget(self.groupBox_servE)
+        vbox.addLayout(self.hboxlayout_Adapt)
 
-        self.label = QLabel(self)
-        self.label.setFont(QtGui.QFont("Sanserif", 15))
-        vbox.addWidget(self.label)
 
+
+        self.setLayout(vbox)
+
+        self.show()
+
+    def createLayout4(self):
+        self.hboxlayout_Adapt = QHBoxLayout()
+        self.hboxlayout_Adapt.addStretch(1)
         buttonSerachAdapter = QPushButton("Search Network Adapters", self)
         buttonSerachAdapter.setIconSize(QtCore.QSize(40,40))
         buttonSerachAdapter.setMinimumHeight(40)
         buttonSerachAdapter.clicked.connect(self.ChooseIP)
-        # buttonSerachAdapter.clicked.connect(self.IPADD)
-        vbox.addWidget(buttonSerachAdapter)
+        self.hboxlayout_Adapt.addWidget(buttonSerachAdapter)
+        self.hboxlayout_Adapt.addStretch(1)
 
-        self.setLayout(vbox)
-        self.show()
+    def createLayout3(self):
+        hboxlayout_serverE = QHBoxLayout()
+        self.groupBox_servE = QGroupBox("Server events")
+
+        self.label_servE = QLabel(self)
+        self.label_servE.setFont(QtGui.QFont("Sanserif", 10))
+
+        scroll = QScrollArea()
+        scroll.setWidget(self.label_servE)
+        scroll.setWidgetResizable(True)
+        scroll.setFixedHeight(100)
+        hboxlayout_serverE.addWidget(scroll)
+
+        self.groupBox_servE.setLayout(hboxlayout_serverE)
 
     def createLayout1(self):
         hboxlayout = QHBoxLayout()
@@ -121,16 +142,32 @@ class Window(QDialog):
         print("Server is running")
         # with open('output.txt', 'w') as f:
             # self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py","name1","name2","name3"] , stdout = f)
+
+        self.co = 0
+        # self.label.setText(str(self.co))
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.Refresher)
+        self.timer.start(1000)
+
         ipServ = self.ServerIP.text()
         portN = self.PortN.text()
+        with open('output.txt', 'w') as f:
+            subprocess.Popen(["python", "-u", "ArduinoSocket.py", ipServ, portN] , stdout = f) # shell = True)
 
-        self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py", ipServ, portN] , shell = True)
+
 
     def SDisconnect(self):
         cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /f /pid %a'
         os.system(cmd)
+        self.timer.stop()
         print("Server Disconnected")
 
+
+    def Refresher(self):
+        f = open("output.txt", "r")
+        self.label_servE.setText(f.read())
+        f.close()
+        # self.co += 1
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)

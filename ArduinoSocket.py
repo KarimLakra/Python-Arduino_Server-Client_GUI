@@ -13,7 +13,7 @@ print('Server lisetining on: {0} port {1}'.format(serverIP[0], str(serverIP[1]))
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Bind the socket to the port
 # server_address = ('192.168.1.2', 65432)
-server_address = (serverIP[0], 65432)
+server_address = (serverIP[0], int(serverIP[1]))
 sock.bind(server_address)
 # Listen for incoming connections
 sock.listen(1)
