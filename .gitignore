@@ -2,3 +2,4 @@
 output.txt
 #test*
 #bat.bat
+__pycache__
