@@ -14,7 +14,6 @@ server_address = (serverIP[0], int(serverIP[1]))
 sock.bind(server_address)
 # Listen for incoming connections
 sock.listen(1)
-i = 0
 try:
     while True:
 
