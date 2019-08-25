@@ -35,8 +35,6 @@ class Window(QDialog):
         vbox.addWidget(self.groupBox_servE)
         vbox.addLayout(self.hboxlayout_Adapt)
 
-
-
         self.setLayout(vbox)
 
         self.show()
@@ -143,11 +141,9 @@ class Window(QDialog):
         # with open('output.txt', 'w') as f:
             # self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py","name1","name2","name3"] , stdout = f)
 
-        self.co = 0
-        # self.label.setText(str(self.co))
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.Refresher)
-        self.timer.start(1000)
+        self.timer.start(100)
 
         ipServ = self.ServerIP.text()
         portN = self.PortN.text()
@@ -160,6 +156,7 @@ class Window(QDialog):
         cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /f /pid %a'
         os.system(cmd)
         self.timer.stop()
+        self.label_servE.setText("Server Disconnected")
         print("Server Disconnected")
 
 
@@ -167,7 +164,6 @@ class Window(QDialog):
         f = open("output.txt", "r")
         self.label_servE.setText(f.read())
         f.close()
-        # self.co += 1
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)

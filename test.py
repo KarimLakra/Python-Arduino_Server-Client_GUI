@@ -12,6 +12,7 @@ class Window(QWidget):
         self.setWindowIcon(QtGui.QIcon("icon.png"))
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
+        
         formLayout =QFormLayout()
         groupBox = QGroupBox("This Is Group Box")
         labelLis = []

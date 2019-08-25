@@ -1,2 +1,3 @@
 Server lisetining on: 192.168.1.2 port 65432
 waiting for a connection...
+connection from 192.168.1.21:49166
