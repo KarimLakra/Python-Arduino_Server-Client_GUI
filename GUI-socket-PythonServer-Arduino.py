@@ -22,7 +22,7 @@ class Window(QDialog):
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 300, 250)
+        self.setGeometry(500, 200, 800, 500)
 
         self.createLayout1()
         self.createLayout2()
@@ -59,7 +59,7 @@ class Window(QDialog):
         scroll = QScrollArea()
         scroll.setWidget(self.label_servE)
         scroll.setWidgetResizable(True)
-        scroll.setFixedHeight(100)
+        # scroll.setFixedHeight(100)
         hboxlayout_serverE.addWidget(scroll)
 
         self.groupBox_servE.setLayout(hboxlayout_serverE)
@@ -153,7 +153,7 @@ class Window(QDialog):
 
 
     def SDisconnect(self):
-        cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /f /pid %a'
+        cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
         os.system(cmd)
         self.timer.stop()
         self.label_servE.setText("Server Disconnected")

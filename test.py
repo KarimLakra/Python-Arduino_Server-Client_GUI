@@ -1,34 +1,33 @@
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import QApplication, QWidget, QScrollArea, QVBoxLayout, QGroupBox, QLabel, QPushButton, QFormLayout
 import sys
-class Window(QWidget):
-    def __init__(self, val):
-        super().__init__()
-        self.title = "PyQt5 Scroll Bar"
-        self.top = 200
-        self.left = 500
-        self.width = 400
-        self.height = 300
-        self.setWindowIcon(QtGui.QIcon("icon.png"))
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
-        
-        formLayout =QFormLayout()
-        groupBox = QGroupBox("This Is Group Box")
-        labelLis = []
-        comboList = []
-        for i in  range(val):
-            labelLis.append(QLabel("Label"))
-            comboList.append(QPushButton("Click Me"))
-            formLayout.addRow(labelLis[i], comboList[i])
-        groupBox.setLayout(formLayout)
-        scroll = QScrollArea()
-        scroll.setWidget(groupBox)
-        scroll.setWidgetResizable(True)
-        scroll.setFixedHeight(400)
-        layout = QVBoxLayout(self)
-        layout.addWidget(scroll)
-        self.show()
-App = QApplication(sys.argv)
-window = Window(30)
-sys.exit(App.exec())
+import socket
+from time import sleep
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('192.168.1.2',65432))
+s.settimeout(2)
+
+while True:
+    try:
+        msg = s.recv(4096)
+    except socket.timeout as e:
+        err = e.args[0]
+        # this next if/else is a bit redundant, but illustrates how the
+        # timeout exception is setup
+        if err == 'timed out':
+            sleep(1)
+            print ('recv timed out, retry later')
+            continue
+        else:
+            print (e)
+            sys.exit(1)
+    except socket.error as e:
+        # Something else happened, handle error, exit, etc.
+        print (e)
+        sys.exit(1)
+    else:
+        if len(msg) == 0:
+            print ('orderly shutdown on server end')
+            sys.exit(0)
+        else:
+            # got a message do something :)
+            print('NO')
