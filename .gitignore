@@ -1,4 +1,5 @@
 #/Notes
 output*
 #test*
-#bat.bat
+bat.bat
+__pycache__
