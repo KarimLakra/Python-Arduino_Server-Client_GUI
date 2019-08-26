@@ -1,57 +1,47 @@
 import sys
-from PyQt5 import QtCore, QtWidgets,  QtGui
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QApplication, QLabel, QPushButton,
-    QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout,  QLayout,
-    QDialogButtonBox, QListView, QLineEdit, QScrollArea)
+import numpy as np
 
-class MyWindow(QtWidgets.QWidget):
+from PyQt5 import QtCore, QtWidgets, QtGui, uic
+from PyQt5.QtWidgets import QWidget
+
+import matplotlib
+matplotlib.use('QT5Agg')
+
+import matplotlib.pylab as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+class MyWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.t = False
-        self.intw()
-
-    def intw(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 700, 500)
+        self.setGeometry(500, 200, 500, 550)
 
-        hbox = QHBoxLayout()
-        vbox = QVBoxLayout()
+        # uic.loadUi('test.ui', self)
+        self.content_plot = QWidget(self)
+        self.content_plot.resize(500, 500)
+        self.content_plot.move(0,0)
 
-        self.c = QWidget()
-        self.c.setStyleSheet("background-color: red")
-        self.c.setMaximumWidth(10)
-        self.c.setMaximumHeight(10)
-        self.c.move(30, 30)
-        hbox.addWidget(self.c)
-        # hbox.addStretch(0)
+        # test data
+        data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
+        fig, ax1 = plt.subplots()
+        bins = np.arange(0.6, 1.62, 0.02)
+        n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
+        # plot
+        self.plotWidget = FigureCanvas(fig)
+        # lay = QtWidgets.QVBoxLayout(self.content_plot)
+        lay = QtWidgets.QVBoxLayout(self.content_plot)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.plotWidget)
+        # add toolbar
+        self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, self))
 
-        button = QPushButton("Run server")
-        button.setIcon(QtGui.QIcon("StartServer.png"))
-        button.setIconSize(QtCore.QSize(40,40))
-        button.setMinimumHeight(50)
-        button.setMinimumWidth(120)
-        button.clicked.connect(self.toogleColor)
-
-
-        # hbox.addStretch(1)
-
-        vbox.addLayout(hbox)
-        vbox.addWidget(button)
-        self.setLayout(vbox)
-
-    def toogleColor(self):
-        if self.t == True:
-            self.c.setStyleSheet("background-color: red")
-            self.t = False
-        else:
-            self.c.setStyleSheet("background-color: green")
-            self.t = True
+        self.show()
 
 if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     window = MyWindow()
-    window.show()
     sys.exit(app.exec_())

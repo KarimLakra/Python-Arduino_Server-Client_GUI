@@ -25,7 +25,6 @@ class MyWindow(QtWidgets.QMainWindow):
         self.content_plot.move(0,0)
 
         # test data
-
         data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
         fig, ax1 = plt.subplots()
         bins = np.arange(0.6, 1.62, 0.02)

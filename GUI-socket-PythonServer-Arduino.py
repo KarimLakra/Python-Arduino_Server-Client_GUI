@@ -1,11 +1,47 @@
+import sys, os, signal, socket, subprocess, netifaces, random, getIP_List_func
+
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
     QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout,  QLayout,
-    QDialogButtonBox, QListView, QLineEdit, QScrollArea)
+    QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget)
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QRect, Qt, QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-import sys, os, signal, socket, subprocess, netifaces, random, getIP_List_func
+import numpy as np
+
+import matplotlib
+matplotlib.use('QT5Agg')
+
+import matplotlib.pylab as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+class MyWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
+        self.setWindowTitle("Socket Server")
+        self.setGeometry(500, 200, 500, 550)
+
+        # uic.loadUi('test.ui', self)
+        self.content_plot = QWidget(self)
+        self.content_plot.resize(500, 500)
+        self.content_plot.move(0,0)
+
+        # test data
+        data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
+        fig, ax1 = plt.subplots()
+        bins = np.arange(0.6, 1.62, 0.02)
+        n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
+        # plot
+        self.plotWidget = FigureCanvas(fig)
+        # lay = QtWidgets.QVBoxLayout(self.content_plot)
+        lay = QtWidgets.QVBoxLayout(self.content_plot)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(self.plotWidget)
+        # add toolbar
+        self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, self))
 
 class Window(QDialog):
     def __init__(self):
@@ -15,6 +51,7 @@ class Window(QDialog):
 
         self.RNDbtn = False
 
+
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
@@ -22,7 +59,8 @@ class Window(QDialog):
 
         self.createLayout1()
         self.createLayout2()
-        self.createLayout3()
+        self.CreateLyt_plotData(QMainWindow)
+        self.createLyt_ServerEvents()
 
         vbox = QVBoxLayout()
         hboxPort_debugLbl = QHBoxLayout()
@@ -32,6 +70,7 @@ class Window(QDialog):
 
         vbox.addWidget(self.groupBox)
         vbox.addLayout(hboxPort_debugLbl)
+        vbox.addWidget(self.groupBox_Plt)
         vbox.addWidget(self.groupBox_servE)
 
         self.setLayout(vbox)
@@ -141,7 +180,35 @@ class Window(QDialog):
         self.groupBox1.setLayout(hboxLbl_Inp_But)
         self.groupBox2.setLayout(hboxDebug)
 
-    def createLayout3(self):
+    def CreateLyt_plotData(self, QMainWindow):
+        hboxlayout_plt = QHBoxLayout()
+        hboxPLT = QHBoxLayout()
+        self.groupBox_Plt = QGroupBox("Received data")
+
+        # self.content_plot = QWidget()
+        # self.content_plot.resize(500, 500)
+        # self.content_plot.move(0,0)
+        # # test data
+        # data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
+        # fig, ax1 = plt.subplots()
+        # bins = np.arange(0.6, 1.62, 0.02)
+        # n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
+
+        # self.plotWidget = FigureCanvas(fig)
+        # lay = QtWidgets.QVBoxLayout(self.content_plot)
+        # lay.setContentsMargins(0, 0, 0, 0)
+        # lay.addWidget(self.plotWidget)
+        # # add toolbar
+        # self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, hboxlayout_plt))
+        # hboxlayout_plt.addWidget(self.content_plot)
+
+        # plotD = MyWindow()
+        #
+        # hboxlayout_plt.addWidget(plotD)
+        self.groupBox_Plt.setLayout(hboxlayout_plt)
+
+
+    def createLyt_ServerEvents(self):
         self.hboxlayout_serverE = QHBoxLayout()
         self.groupBox_servE = QGroupBox("Server events")
 
@@ -163,9 +230,6 @@ class Window(QDialog):
             # self.label.setText(dlg.IPselected)
             self.IPSel = dlg.IPselected
             self.ServerIP.setText(self.IPSel)
-        # else:
-        #     print("Cancel!")
-
 
     def SConnect(self):
         print("Server is running")
@@ -180,7 +244,6 @@ class Window(QDialog):
         portN = self.PortN.text()
         with open('output.txt', 'w') as f:
             subprocess.Popen(["python", "-u", "ArduinoSocket.py", ipServ, portN] , stdout = f) # shell = True)
-
 
     def SDisconnect(self):
         cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
