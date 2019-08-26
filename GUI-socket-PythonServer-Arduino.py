@@ -22,11 +22,11 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 500, 550)
+        self.setGeometry(500, 200, 800, 700)
 
         # uic.loadUi('test.ui', self)
         self.content_plot = QWidget(self)
-        self.content_plot.resize(500, 500)
+        self.content_plot.resize(750, 200)
         self.content_plot.move(0,0)
 
         # test data
@@ -55,7 +55,7 @@ class Window(QDialog):
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 800, 500)
+        self.setGeometry(500, 200, 800, 800)
 
         self.createLayout1()
         self.createLayout2()
@@ -185,26 +185,10 @@ class Window(QDialog):
         hboxPLT = QHBoxLayout()
         self.groupBox_Plt = QGroupBox("Received data")
 
-        # self.content_plot = QWidget()
-        # self.content_plot.resize(500, 500)
-        # self.content_plot.move(0,0)
-        # # test data
-        # data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
-        # fig, ax1 = plt.subplots()
-        # bins = np.arange(0.6, 1.62, 0.02)
-        # n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
+        plotD = MyWindow()
 
-        # self.plotWidget = FigureCanvas(fig)
-        # lay = QtWidgets.QVBoxLayout(self.content_plot)
-        # lay.setContentsMargins(0, 0, 0, 0)
-        # lay.addWidget(self.plotWidget)
-        # # add toolbar
-        # self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, hboxlayout_plt))
-        # hboxlayout_plt.addWidget(self.content_plot)
-
-        # plotD = MyWindow()
-        #
-        # hboxlayout_plt.addWidget(plotD)
+        hboxlayout_plt.addWidget(plotD)
+        # hboxlayout_plt.addStretch()
         self.groupBox_Plt.setLayout(hboxlayout_plt)
 
 
@@ -212,16 +196,18 @@ class Window(QDialog):
         self.hboxlayout_serverE = QHBoxLayout()
         self.groupBox_servE = QGroupBox("Server events")
 
-        self.label_servE = QLabel(self)
+        self.label_servE = QLabel()
         self.label_servE.setFont(QtGui.QFont("Sanserif", 10))
+        # self.label_servE.setMaximumHeight(30)
 
         scroll = QScrollArea()
         scroll.setWidget(self.label_servE)
         scroll.setWidgetResizable(True)
-        # scroll.setFixedHeight(100)
         self.hboxlayout_serverE.addWidget(scroll)
 
+
         self.groupBox_servE.setLayout(self.hboxlayout_serverE)
+
 
     def ChooseIP(self):
         dlg = getIP_List_func.CustomDialog(self)
