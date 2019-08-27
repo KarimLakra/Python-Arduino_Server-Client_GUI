@@ -1,5 +1,8 @@
 #/Notes
-output.txt
+output*
 #test*
-#bat.bat
-__pycache__
+bat.bat
+__pycache__/
+*.py[cod]
+*$py.class
+

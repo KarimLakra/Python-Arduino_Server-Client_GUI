@@ -1,34 +1,22 @@
-/*
-  Telnet client
-
- This sketch connects to a a telnet server (http://www.google.com)
- using an Arduino Wiznet Ethernet shield.  You'll need a telnet server
- to test this with.
- Processing's ChatServer example (part of the network library) works well,
- running on port 10002. It can be found as part of the examples
- in the Processing application, available at
- http://processing.org/
-
- Circuit:
- * Ethernet shield attached to pins 10, 11, 12, 13
-
- created 14 Sep 2010
- modified 9 Apr 2012
- by Tom Igoe
- */
-
 #include <SPI.h>
 #include <Ethernet.h>
+
+//Testing a keypad UP DOWN LEFT RIGHT OK
+int UP = A0, LEFT = A1, OK = A2, RIGHT = A3, DOWN = A4;
+int UPState, LEFTState, OKState,RIGHTState, DOWNState;
+int con = 0;// connection status
+
+String pressed=""; //Pressed button
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+  0x90, 0xA2, 0xDA, 0x00, 0xFE, 0xAC
 };
 IPAddress ip(192, 168, 1, 21);
 
 // Enter the IP address of the server you're connecting to:
-IPAddress server(192, 168, 1, 4);
+IPAddress server(192, 168, 1, 2);
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server
@@ -37,6 +25,14 @@ IPAddress server(192, 168, 1, 4);
 EthernetClient client;
 
 void setup() {
+
+  pinMode(7,OUTPUT);
+  pinMode(A0, INPUT_PULLUP);
+  pinMode(A1, INPUT_PULLUP);
+  pinMode(A2, INPUT_PULLUP);
+  pinMode(A3, INPUT_PULLUP);
+  pinMode(A4, INPUT_PULLUP);
+
   // You can use Ethernet.init(pin) to configure the CS pin
   //Ethernet.init(10);  // Most Arduino shields
   //Ethernet.init(5);   // MKR ETH shield
@@ -61,18 +57,27 @@ void setup() {
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
-  while (Ethernet.linkStatus() == LinkOFF) {
-    Serial.println("Ethernet cable is not connected.");
-    delay(500);
+//  while (Ethernet.linkStatus() == LinkOFF) {
+//    Serial.println("Ethernet cable is not connected.");
+//    delay(500);
+//  }
+  if (Ethernet.linkStatus() == Unknown) {
+//    Serial.println("Link status unknown. Link status detection is only available with W5200 and W5500.");
   }
-
+  else if (Ethernet.linkStatus() == LinkON) {
+    Serial.println("Link status: On");
+  }
+  else if (Ethernet.linkStatus() == LinkOFF) {
+    Serial.println("Link status: Off");
+  }
   // give the Ethernet shield a second to initialize:
-  delay(5000);
+  delay(1000);
   Serial.println("connecting...");
 
   // if you get a connection, report back via serial:
-  if (client.connect(server, 10002)) {
+  if (client.connect(server, 65432)) {
     Serial.println("connected");
+    digitalWrite(7, HIGH);
   } else {
     // if you didn't get a connection to the server:
     Serial.println("connection failed");
@@ -80,6 +85,35 @@ void setup() {
 }
 
 void loop() {
+
+  pressed = "";//no button pressed
+  UPState = analogRead(UP);
+  LEFTState = analogRead(LEFT);
+  OKState = analogRead(OK);
+  RIGHTState = analogRead(RIGHT);
+  DOWNState = analogRead(DOWN);
+
+  if(UPState <= 100){pressed = "UP";}
+  if(LEFTState <= 100){pressed = "LEFT";}
+  if(OKState <= 100){pressed = "OK";}
+  if(RIGHTState <= 100){pressed = "RIGHT";}
+  if(DOWNState <= 100){pressed = "DOWN";}
+
+  if(pressed != ""){
+      Serial.print("Pressed button :");
+      Serial.println(pressed);
+      if (client.connected()) {
+        client.println(pressed);
+      }
+    }
+
+  while (Serial.available() > 0) {
+    char inChar = Serial.read();
+    if (client.connected()) {
+      client.print(inChar);
+    }
+  }
+
   // if there are incoming bytes available
   // from the server, read them and print them:
   if (client.available()) {
@@ -89,21 +123,36 @@ void loop() {
 
   // as long as there are bytes in the serial queue,
   // read them and send them out the socket if it's open:
-  while (Serial.available() > 0) {
-    char inChar = Serial.read();
-    if (client.connected()) {
-      client.print(inChar);
+//  while (Serial.available() > 0) {
+//    char inChar = Serial.read();
+//    if (client.connected()) {
+//      client.print(inChar);
+//    }
+//  }
+
+  if (!client.connected()) {
+    digitalWrite(7, LOW);
+    if (client.connect(server, 65432)) {
+        Serial.println("connected");
+        digitalWrite(7, HIGH);
+        con = 0;
+    } else {
+      if(con==0){
+        Serial.println("Waiting connection...");
+        con = 1;
+      }
+      delay(1);
     }
   }
 
   // if the server's disconnected, stop the client:
-  if (!client.connected()) {
-    Serial.println();
-    Serial.println("disconnecting.");
-    client.stop();
-    // do nothing:
-    while (true) {
-      delay(1);
-    }
-  }
+//  if (!client.connected()) {
+//    Serial.println();
+//    Serial.println("disconnecting.");
+//    client.stop();
+//    // do nothing:
+//    while (true) {
+//      delay(1);
+//    }
+//  }
 }

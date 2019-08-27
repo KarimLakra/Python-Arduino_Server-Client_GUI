@@ -1,60 +1,80 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QGroupBox, QPushButton, QHBoxLayout, QVBoxLayout, QBoxLayout, QListView, QDialog
 import sys
-import os
+from PyQt5.QtWidgets import (QMainWindow,QApplication,QDialog,
+QHBoxLayout, QVBoxLayout, QGroupBox, QWidget, QPushButton)
 from PyQt5 import QtGui
-from PyQt5 import QtCore
-from PyQt5.QtCore import QRect
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
-import subprocess
-import socket
-import netifaces
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore, QtGui
+import numpy as np
 
-class Window(QDialog):
+
+class WindowWidgets(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.init_widget()
+        vbox = QVBoxLayout()
+        self.createLayout1()
+        vbox.addWidget(self.groupBox)
+        self.setLayout(vbox)
+
+    def createLayout1(self):
+        hboxlayout = QHBoxLayout()
+        # hboxlayout.setSizeConstraint(QLayout.SetFixedSize)
+        self.groupBox = QGroupBox("GroupBox")
+
+        win = pg.GraphicsWindow()
+        win.setWindowTitle('pyqtgraph example: Scrolling Plots')
+
+        p1 = win.addPlot()
+        p2 = win.addPlot()
+        data1 = np.random.normal(size=300)
+        curve1 = p1.plot(data1)
+        curve2 = p2.plot(data1)
+        ptr1 = 0
+        def update1():
+            global data1, curve1, ptr1
+            data1[:-1] = data1[1:]  # shift data in the array one sample left
+                                    # (see also: np.roll)
+            data1[-1] = np.random.normal()
+            curve1.setData(data1)
+
+            ptr1 += 1
+            curve2.setData(data1)
+            curve2.setPos(ptr1, 0)
+
+        def update():
+            update1()
+        def StartTime():
+            self.timer = pg.QtCore.QTimer()
+            self.timer.timeout.connect(update)
+            self.timer.start(50)
+            print("started")
+
+        okButton = QPushButton("OK")
+        okButton.clicked.connect(StartTime)
+        hboxlayout.addWidget(okButton)
+
+        self.groupBox.setLayout(hboxlayout)
 
 
-    def init_widget(self):
+
+
+class Window(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.InitWindow()
+
+    def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
-        self.setWindowTitle("Select Ip address")
-        self.setGeometry(500, 200, 500, 200)
+        self.setWindowTitle("App Title")
+        self.setGeometry(500, 200, 800, 800)
 
-        widget_laytout = QBoxLayout(QBoxLayout.LeftToRight)
-
-        group = QGroupBox()
-        box = QBoxLayout(QBoxLayout.TopToBottom)
-        group.setLayout(box)
-        group.setTitle("Adapters list")
-        widget_laytout.addWidget(group)
-
-        fruits = ["Buttons in GroupBox", "TextBox in GroupBox", "Label in GroupBox", "TextEdit"]
-        view = QListView(self)
-        self.model = QStandardItemModel()
-
-        # for f in fruits:
-        #     model.appendRow(QStandardItem(f))
-        self.listAddrs()
-
-        view.setModel(self.model)
-        box.addWidget(view)
-        stk_w = QVBoxLayout()
-        self.setLayout(widget_laytout)
+        hboxlayout = QHBoxLayout()
+        tests = WindowWidgets()
+        hboxlayout.addWidget(tests)
+        self.setLayout(hboxlayout)
 
         self.show()
-
-    def listAddrs(self):
-        ad = netifaces.interfaces()
-        for adpt in ad:
-            # print(netifaces.ifaddresses(adpt))
-            va = netifaces.ifaddresses(adpt)
-            if 2 in va:
-                adapt = netifaces.ifaddresses(adpt)[2][0] # ['addr']
-                # print(adapt)
-                self.model.appendRow(QStandardItem('addr: ' + adapt['addr'] +
-                '  netmask: ' + adapt['netmask'] +
-                '  broadcast: ' + adapt['broadcast']))
 
 
 
