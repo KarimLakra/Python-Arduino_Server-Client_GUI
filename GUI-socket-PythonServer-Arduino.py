@@ -1,7 +1,7 @@
 import sys, os, signal, socket, subprocess, netifaces, random, getIP_List_func
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
-    QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout,  QLayout,
+    QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QLayout,
     QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget)
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QRect, Qt, QTimer
@@ -16,17 +16,13 @@ import matplotlib.pylab as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-class MyWindow(QtWidgets.QMainWindow):
+class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
-        self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 800, 700)
-
         # uic.loadUi('test.ui', self)
         self.content_plot = QWidget(self)
-        self.content_plot.resize(750, 200)
+        self.content_plot.resize(800, 350)
         self.content_plot.move(0,0)
 
         # test data
@@ -43,14 +39,16 @@ class MyWindow(QtWidgets.QMainWindow):
         # add toolbar
         self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, self))
 
-class Window(QDialog):
+# class ButtonsTop(QMainWindow):
+#     def __init__(self):
+#         super().__init__()
+
+class Main_Window(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.InitWindow()
-
         self.RNDbtn = False
-
+        self.InitWindow()
 
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
@@ -194,15 +192,19 @@ class Window(QDialog):
 
     def createLyt_ServerEvents(self):
         self.hboxlayout_serverE = QHBoxLayout()
+        self.hboxlayout_serverE.setSizeConstraint(QLayout.SetFixedSize)
         self.groupBox_servE = QGroupBox("Server events")
 
         self.label_servE = QLabel()
         self.label_servE.setFont(QtGui.QFont("Sanserif", 10))
-        # self.label_servE.setMaximumHeight(30)
+        self.label_servE.setMaximumHeight(80)
+        self.label_servE.setMinimumWidth(790)
 
         scroll = QScrollArea()
         scroll.setWidget(self.label_servE)
         scroll.setWidgetResizable(True)
+        scroll.setMaximumHeight(80)
+        scroll.setMinimumWidth(800)
         self.hboxlayout_serverE.addWidget(scroll)
 
 
@@ -262,5 +264,5 @@ class Window(QDialog):
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)
-    window = Window()
+    window = Main_Window()
     sys.exit(App.exec())
