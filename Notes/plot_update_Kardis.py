@@ -10,7 +10,6 @@ from PyQt5.QtCore import Qt as QTC
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
-from XAxisTime import TimeAxisItem, timestamp
 
 
 class WindowPlot(QMainWindow):
@@ -20,7 +19,6 @@ class WindowPlot(QMainWindow):
 
         self.RNDbtn = False
         self.data = np.random.normal(size=100)
-        self.timeAppend = timestamp()+100
         self.refreshInterval = 1000 # refresh plot every 1s
         self.timer = pg.QtCore.QTimer()
 
@@ -80,11 +78,7 @@ class WindowPlot(QMainWindow):
 
     def create_plot(self):
 
-        self.stream_scroll = pg.PlotWidget(
-            title='Stream Monitor',
-            labels={'left': 'Channel'},
-            axisItems={'bottom': TimeAxisItem(orientation='bottom')}
-        )
+        self.stream_scroll = pg.PlotWidget(title='Stream Monitor')
 
         # if not self.parent.daisy_entry.currentIndex():
         # self.channel_count = 16
@@ -98,21 +92,14 @@ class WindowPlot(QMainWindow):
         #   self.stream_scroll.setYRange(-.5,8,padding=.01)
 
         # self.stream_scroll_time_axis = np.linspace(-5,0,samples)
-
-        # self.stream_scroll.setXRange(0,100, padding=.01)
-        self.stream_scroll.setXRange(timestamp(), timestamp() + 100)
-
-        # self.stream_scroll.setLabel('bottom','Time','Seconds')
-        # self.stream_scroll.setLabel('left','Channel')
-
+        self.stream_scroll.setXRange(0,100, padding=.01)
+        self.stream_scroll.setLabel('bottom','Time','Seconds')
+        self.stream_scroll.setLabel('left','Channel')
         # for i in range(self.channel_count-1,-1,-1):
         #   self.data_buffer['buffer_channel{}'.format(i+1)] = deque([0]*self.buffer_size)
         #   self.filtered_data['filtered_channel{}'.format(i+1)] = deque([0]*samples)
         #   self.curves['curve_channel{}'.format(i+1)] = self.stream_scroll.plot()
         #   self.curves['curve_channel{}'.format(i+1)].setData(x=self.stream_scroll_time_axis,y=([point+i+1 for point in self.filtered_data['filtered_channel{}'.format(i+1)]]))
-
-
-
         self.layout = QtGui.QGridLayout()
         self.stream_scroll.plotItem.showGrid(True, True, .5)
         self.layout.addWidget(self.stream_scroll,0,0)
@@ -121,9 +108,6 @@ class WindowPlot(QMainWindow):
         # global data
         self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
         self.data[-1] = np.random.normal()
-        self.timeAppend[:-1] = self.timeAppend[1:]
-        self.timeAppend[-1:] = timestamp()+100
-
         t1=time.process_time()
         points=100 #number of data points
         X=np.arange(points)

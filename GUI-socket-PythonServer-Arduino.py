@@ -2,7 +2,7 @@ import sys, os, signal, socket, subprocess, netifaces, random, getIP_List_func, 
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
     QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QLayout,
-    QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget)
+    QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget, QGridLayout)
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QRect, Qt, QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
@@ -42,10 +42,13 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
-        pg.setConfigOption('background', 'w') #before loading widget
+        # pg.setConfigOption('background', 'w') #before loading widget
         super(WindowPlot, self).__init__(parent)
 
         self.RNDbtn = False
+        self.data = np.random.normal(size=100)
+        self.refreshInterval = 1000 # refresh plot every 1s
+        self.timer = pg.QtCore.QTimer()
 
         self.wid = QtGui.QWidget(self)
         self.setCentralWidget(self.wid)
@@ -63,13 +66,43 @@ class WindowPlot(QMainWindow):
         self.create_plot()
         vboxlayout.addLayout(self.layout)
 
+        self.grid = QGridLayout()
+
         self.GetDataBtn = QPushButton("Connect")
         self.GetDataBtn.clicked.connect(self.ticker)
         self.GetDataBtn.setMinimumHeight(50)
         self.GetDataBtn.setMinimumWidth(180)
-        vboxlayout.addWidget(self.GetDataBtn)
 
+        # self.slider = QSlider(QTC.Horizontal)
+        # self.slider.setFocusPolicy(QTC.StrongFocus)
+        # self.slider.setTickPosition(QSlider.TicksBothSides)
+        # self.slider.setTickInterval(1)
+        # self.slider.setSingleStep(1)
+        # self.slider.setMaximum(10)
+        # self.slider.setMinimum(0)
+        # self.slider.valueChanged.connect(self.SliderVal)
+        # self.slider.setValue(7)
+
+        self.cb = QtWidgets.QComboBox()
+        # self.cb.addItem("10")
+        self.cb.addItems(["1000", "500", "250", "100", "50"])
+        self.cb.currentIndexChanged.connect(self.ComboInterval)
+
+        # self.grid.addWidget(self.slider, 0, 0)
+        self.grid.addWidget(self.GetDataBtn, 0, 0)
+        self.grid.addWidget(self.cb, 0, 1)
+
+
+        vboxlayout.addLayout(self.grid)
         self.groupBox.setLayout(vboxlayout)
+
+    def SliderVal(self):
+        print(self.slider.value())
+    def ComboInterval(self):
+        self.refreshInterval = int(self.cb.currentText())
+        if self.timer.isActive():
+            self.timer.stop()
+            self.timer.start(self.refreshInterval)
 
 
     def create_plot(self):
@@ -77,10 +110,10 @@ class WindowPlot(QMainWindow):
         self.stream_scroll = pg.PlotWidget(title='Stream Monitor')
 
         # if not self.parent.daisy_entry.currentIndex():
-        self.channel_count = 16
-        self.buffer_size = 1000
-        samples = 125
-        self.stream_scroll.setYRange(0,1,padding=.01)
+        # self.channel_count = 16
+        # self.buffer_size = 1000
+        # samples = 125
+        self.stream_scroll.setYRange(-4,4,padding=.01)
         # else:
         # self.channel_count = 8
         #   samples = 250
@@ -101,13 +134,15 @@ class WindowPlot(QMainWindow):
         self.layout.addWidget(self.stream_scroll,0,0)
 
     def update1(self):
+        self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
+        self.data[-1] = np.random.normal()
         t1=time.process_time()
         points=100 #number of data points
         X=np.arange(points)
         # Y=np.sin(np.arange(points)/points*3*np.pi+time.time())
-        Y=np.random.rand(100)
+        Y=self.data  # np.random.rand(100)
         # C=pg.hsvColor(time.time()/5%1,alpha=.5) # Change color each tick
-        C=pg.hsvColor(0,alpha=.5)
+        C=pg.hsvColor(0.7,alpha=.5)
         pen=pg.mkPen(color=C,width=1)
         self.stream_scroll.plot(X,Y,pen=pen,clear=True)
         print("update took %.02f ms"%((time.process_time()-t1)*1000))
@@ -116,9 +151,9 @@ class WindowPlot(QMainWindow):
 
     def ticker(self):
         if self.RNDbtn == False:
-            self.timer = pg.QtCore.QTimer()
+            # self.timer = pg.QtCore.QTimer()
             self.timer.timeout.connect(self.update1)
-            self.timer.start(1000)
+            self.timer.start(self.refreshInterval)
             print('started')
             self.RNDbtn = True
             self.GetDataBtn.setStyleSheet("background-color: green")
