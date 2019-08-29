@@ -1,4 +1,5 @@
-import sys, os, signal, socket, subprocess, netifaces, random, time
+import sys, os, signal, socket, subprocess, netifaces, random, time, traceback
+from datetime import datetime
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
     QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QLayout,
@@ -25,23 +26,29 @@ class WindowPlot(QMainWindow):
         self.Xtime = []
         self.refreshInterval = 1000 # default refresh plot every 1s
         self.timer = pg.QtCore.QTimer()
+        self.errReadEvent = ''  # holds error history
+        self.counterTest = 0
 
         self.wid = QtGui.QWidget(self)
         self.setCentralWidget(self.wid)
 
         vbox = QVBoxLayout()
         self.createLayout1()
-        vbox.addWidget(self.groupBox)
+        vbox.addWidget(self.groupBoxPlot)
+        vbox.addWidget(self.groupBoxData)
         self.wid.setLayout(vbox)
 
 
     def createLayout1(self):
-        vboxlayout = QVBoxLayout()
-        self.groupBox = QGroupBox("GroupBox")
+        vboxlayoutPlot = QVBoxLayout()
+        vboxlayoutData = QVBoxLayout()
+        self.groupBoxPlot = QGroupBox("Plotting")
+        self.groupBoxData = QGroupBox("Data")
         self.create_plot()
-        vboxlayout.addLayout(self.layout)
+        vboxlayoutPlot.addLayout(self.layout)
 
-        self.grid = QGridLayout()
+        self.gridPlot = QGridLayout()
+        self.gridData = QGridLayout()
 
         self.slider = QSlider(QTC.Horizontal)
         self.slider.setFocusPolicy(QTC.StrongFocus)
@@ -66,47 +73,66 @@ class WindowPlot(QMainWindow):
         self.Refr.addWidget(self.labelInterval)
         self.Refr.addWidget(self.cb)
 
-        self.hboxErrorData = QHBoxLayout()
+        # Error box START
+        self.hboxErrSourceDt = QHBoxLayout()
+        self.ErrorGroup = QGroupBox("Errors")
+        self.vboxErrBox = QVBoxLayout()
+        self.hboxErrLEDLBL = QHBoxLayout()
+        self.hboxErrorEvents = QHBoxLayout()
+        self.hboxErrorEvents.setSizeConstraint(QLayout.SetFixedSize)
 
         self.LEDError = QPushButton()   # used as error LED indicator
         self.LEDError.setEnabled(False)
-        self.LEDError.setMaximumHeight(20)
-        self.LEDError.setMaximumWidth(20)
+        self.LEDError.setMaximumHeight(15)
+        self.LEDError.setMaximumWidth(15)
 
-        self.labelErrors = QLabel()
-        self.labelErrors.setText("Error reading data")
+        self.labelErrorRead = QLabel()
+        self.labelErrorRead.setText("Error reading data")
+
+        self.label_ErrorReadEvents = QLabel()
+        self.label_ErrorReadEvents.setFont(QtGui.QFont("Sanserif", 10))
+        self.label_ErrorReadEvents.setMinimumWidth(200)
+
+        scrollErrors = QScrollArea()
+        scrollErrors.setWidget(self.label_ErrorReadEvents)
+        scrollErrors.setWidgetResizable(True)
+        # scrollErrors.setMaximumHeight(80)
+        scrollErrors.setMinimumWidth(200)
+
+        self.hboxErrLEDLBL.addWidget(self.LEDError)
+        self.hboxErrLEDLBL.addWidget(self.labelErrorRead)
+        self.vboxErrBox.addLayout(self.hboxErrLEDLBL)
+        self.vboxErrBox.addWidget(scrollErrors)
+        self.ErrorGroup.setLayout(self.vboxErrBox)
 
         self.cbDataSource = QtWidgets.QComboBox()
         # self.cb.addItem("10")
         self.cbDataSource.addItems(["Random generated test Data", "Remote data"])
-        self.cbDataSource.setCurrentIndex(0)
-        self.cbDataSource.currentIndexChanged.connect(self.DataSource)
+        self.cbDataSource.setCurrentIndex(1)
 
-        self.hboxErrorData.addWidget(self.LEDError)
-        self.hboxErrorData.addWidget(self.labelErrors)
-        self.hboxErrorData.addWidget(self.cbDataSource)
+        self.hboxErrSourceDt.addWidget(self.ErrorGroup)
+        self.hboxErrSourceDt.addWidget(self.cbDataSource)
+        # Error box END
 
-        self.GetDataBtn = QPushButton("Connect")
+        self.GetDataBtn = QPushButton("Start Plot")
         self.GetDataBtn.clicked.connect(self.ticker)
         self.GetDataBtn.setMinimumHeight(50)
         self.GetDataBtn.setMinimumWidth(180)
 
+        self.gridPlot.addWidget(self.slider, 0, 0)
+        self.gridPlot.addLayout(self.Refr, 1, 0)
 
-        self.grid.addWidget(self.slider, 0, 0)
-        self.grid.addLayout(self.Refr, 0, 1)
-        self.grid.addLayout(self.hboxErrorData, 1, 0)
-        self.grid.addWidget(self.GetDataBtn, 1, 1)
+        self.gridData.addLayout(self.hboxErrSourceDt, 0, 0)
+        self.gridData.addWidget(self.GetDataBtn, 0, 1)
 
+        vboxlayoutPlot.addLayout(self.gridPlot)
+        self.groupBoxPlot.setLayout(vboxlayoutPlot)
 
-
-        vboxlayout.addLayout(self.grid)
-        self.groupBox.setLayout(vboxlayout)
+        vboxlayoutData.addLayout(self.gridData)
+        self.groupBoxData.setLayout(vboxlayoutData)
 
     # def SliderVal(self):
     #     print(self.slider.value())
-    def DataSource(self):
-        print(self.cbDataSource.currentText())
-        print(self.cbDataSource.currentIndex())
 
 
     def ComboInterval(self):
@@ -157,7 +183,6 @@ class WindowPlot(QMainWindow):
         X = self.Xtime
         # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
         Y = self.data  # np.random.rand(100)
-
         self.curve.setData(X, Y)
 
     def FiledataConvert(self):
@@ -166,10 +191,17 @@ class WindowPlot(QMainWindow):
         f.close()
         try:
             a = round(int(a)/204, 3)
-            self.LEDError.setStyleSheet()
-        except:
+            self.LEDError.setStyleSheet("background-color: blue")
+        except Exception as err:
+            datetimeObj = datetime.now()
             a = 0
             self.LEDError.setStyleSheet("background-color: red")
+            print(datetimeObj)
+            print(traceback.format_exc())   # display error
+            self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
+            self.label_ErrorReadEvents.setText(self.errReadEvent)
+            # print(sys.exc_info()[0])  # display error
+
         return a
 
     def ticker(self):
@@ -325,7 +357,7 @@ class Main_Window(QWidget):
     def CreateLyt_plotData(self, QMainWindow):
         hboxlayout_plt = QHBoxLayout()
         hboxPLT = QHBoxLayout()
-        self.groupBox_Plt = QGroupBox("Received data")
+        self.groupBox_Plt = QGroupBox("Data")
 
         # plotD = MyWindow()
         plotD = WindowPlot()
@@ -342,7 +374,7 @@ class Main_Window(QWidget):
 
         self.label_servE = QLabel()
         self.label_servE.setFont(QtGui.QFont("Sanserif", 10))
-        self.label_servE.setMaximumHeight(80)
+        # self.label_servE.setMaximumHeight(80)
         self.label_servE.setMinimumWidth(790)
 
         scroll = QScrollArea()
