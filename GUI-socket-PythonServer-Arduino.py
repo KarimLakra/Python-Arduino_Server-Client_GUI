@@ -1,44 +1,20 @@
-import sys, os, signal, socket, subprocess, netifaces, random, getIP_List_func, time
+import sys, os, signal, socket, subprocess, netifaces, random, time, traceback
+from datetime import datetime
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
     QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QLayout,
-    QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget)
+    QDialogButtonBox, QListView, QLineEdit, QScrollArea, QWidget,
+    QSlider, QGridLayout)
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QRect, Qt, QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import Qt as QTC
 
 import pyqtgraph as pg
 import numpy as np
 
-import matplotlib
-matplotlib.use('QT5Agg')
-
-import matplotlib.pylab as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-
-# class MyWindow(QMainWindow):
-#     def __init__(self):
-#         super().__init__()
-#
-#         # uic.loadUi('test.ui', self)
-#         self.content_plot = QWidget(self)
-#         self.content_plot.resize(800, 350)
-#         self.content_plot.move(0,0)
-#
-#         # test data
-#         data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
-#         fig, ax1 = plt.subplots()
-#         bins = np.arange(0.6, 1.62, 0.02)
-#         n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
-#         # plot
-#         self.plotWidget = FigureCanvas(fig)
-#         # lay = QtWidgets.QVBoxLayout(self.content_plot)
-#         lay = QtWidgets.QVBoxLayout(self.content_plot)
-#         lay.setContentsMargins(0, 0, 0, 0)
-#         lay.addWidget(self.plotWidget)
-#         # add toolbar
-#         self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, self))
+from XAxisTime import TimeAxisItem, timestamp
+import getIP_List_func
 
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
@@ -46,83 +22,197 @@ class WindowPlot(QMainWindow):
         super(WindowPlot, self).__init__(parent)
 
         self.RNDbtn = False
+        self.data = [] #np.random.normal(size=100)
+        self.Xtime = []
+        self.refreshInterval = 1000 # default refresh plot every 1s
+        self.timer = pg.QtCore.QTimer()
+        self.errReadEvent = ''  # holds error history
+        self.counterTest = 0
 
         self.wid = QtGui.QWidget(self)
         self.setCentralWidget(self.wid)
 
         vbox = QVBoxLayout()
         self.createLayout1()
-        vbox.addWidget(self.groupBox)
+        vbox.addWidget(self.groupBoxPlot)
+        vbox.addWidget(self.groupBoxData)
         self.wid.setLayout(vbox)
 
-        # self.show()
 
     def createLayout1(self):
-        vboxlayout = QVBoxLayout()
-        self.groupBox = QGroupBox("GroupBox")
+        vboxlayoutPlot = QVBoxLayout()
+        vboxlayoutData = QVBoxLayout()
+        self.groupBoxPlot = QGroupBox("Plotting")
+        self.groupBoxData = QGroupBox("Data")
         self.create_plot()
-        vboxlayout.addLayout(self.layout)
+        vboxlayoutPlot.addLayout(self.layout)
 
-        self.GetDataBtn = QPushButton("Connect")
+        self.gridPlot = QGridLayout()
+        self.gridData = QGridLayout()
+
+        self.slider = QSlider(QTC.Horizontal)
+        self.slider.setFocusPolicy(QTC.StrongFocus)
+        self.slider.setTickPosition(QSlider.TicksBothSides)
+        self.slider.setTickInterval(1)
+        self.slider.setSingleStep(1)
+        self.slider.setMaximum(10)
+        self.slider.setMinimum(0)
+        # self.slider.valueChanged.connect(self.SliderVal)
+        self.slider.setValue(7)
+
+        self.cb = QtWidgets.QComboBox()
+        # self.cb.addItem("10")
+        self.cb.addItems(["5", "2", "1"])
+        self.cb.setCurrentIndex(2)
+        self.cb.currentIndexChanged.connect(self.ComboInterval)
+
+        self.Refr = QHBoxLayout()
+        self.labelInterval = QLabel()
+        self.labelInterval.setText("Refresh rate (s)")
+
+        self.Refr.addWidget(self.labelInterval)
+        self.Refr.addWidget(self.cb)
+
+        # Error box START
+        self.hboxErrSourceDt = QHBoxLayout()
+        self.ErrorGroup = QGroupBox("Errors")
+        self.vboxErrBox = QVBoxLayout()
+        self.hboxErrLEDLBL = QHBoxLayout()
+        self.hboxErrorEvents = QHBoxLayout()
+        self.hboxErrorEvents.setSizeConstraint(QLayout.SetFixedSize)
+
+        self.LEDError = QPushButton()   # used as error LED indicator
+        self.LEDError.setEnabled(False)
+        self.LEDError.setMaximumHeight(15)
+        self.LEDError.setMaximumWidth(15)
+
+        self.labelErrorRead = QLabel()
+        self.labelErrorRead.setText("Error reading data")
+
+        self.label_ErrorReadEvents = QLabel()
+        self.label_ErrorReadEvents.setFont(QtGui.QFont("Sanserif", 10))
+        self.label_ErrorReadEvents.setMinimumWidth(200)
+
+        scrollErrors = QScrollArea()
+        scrollErrors.setWidget(self.label_ErrorReadEvents)
+        scrollErrors.setWidgetResizable(True)
+        # scrollErrors.setMaximumHeight(80)
+        scrollErrors.setMinimumWidth(200)
+
+        self.hboxErrLEDLBL.addWidget(self.LEDError)
+        self.hboxErrLEDLBL.addWidget(self.labelErrorRead)
+        self.vboxErrBox.addLayout(self.hboxErrLEDLBL)
+        self.vboxErrBox.addWidget(scrollErrors)
+        self.ErrorGroup.setLayout(self.vboxErrBox)
+
+        self.cbDataSource = QtWidgets.QComboBox()
+        # self.cb.addItem("10")
+        self.cbDataSource.addItems(["Random generated test Data", "Remote data"])
+        self.cbDataSource.setCurrentIndex(1)
+
+        self.hboxErrSourceDt.addWidget(self.ErrorGroup)
+        self.hboxErrSourceDt.addWidget(self.cbDataSource)
+        # Error box END
+
+        self.GetDataBtn = QPushButton("Start Plot")
         self.GetDataBtn.clicked.connect(self.ticker)
         self.GetDataBtn.setMinimumHeight(50)
         self.GetDataBtn.setMinimumWidth(180)
-        vboxlayout.addWidget(self.GetDataBtn)
 
-        self.groupBox.setLayout(vboxlayout)
+        self.gridPlot.addWidget(self.slider, 0, 0)
+        self.gridPlot.addLayout(self.Refr, 1, 0)
 
+        self.gridData.addLayout(self.hboxErrSourceDt, 0, 0)
+        self.gridData.addWidget(self.GetDataBtn, 0, 1)
+
+        vboxlayoutPlot.addLayout(self.gridPlot)
+        self.groupBoxPlot.setLayout(vboxlayoutPlot)
+
+        vboxlayoutData.addLayout(self.gridData)
+        self.groupBoxData.setLayout(vboxlayoutData)
+
+    # def SliderVal(self):
+    #     print(self.slider.value())
+
+
+    def ComboInterval(self):
+        self.refreshInterval = int(self.cb.currentText())*1000
+        if self.timer.isActive():
+            self.timer.stop()
+            self.timer.start(self.refreshInterval)
 
     def create_plot(self):
 
-        self.stream_scroll = pg.PlotWidget(title='Stream Monitor')
+        self.stream_scroll = pg.PlotWidget(
+            title='Stream Monitor',
+            labels={'left': 'Channel'},
+            axisItems={'bottom': TimeAxisItem(orientation='bottom')}
+        )
 
-        # if not self.parent.daisy_entry.currentIndex():
-        self.channel_count = 16
-        self.buffer_size = 1000
-        samples = 125
-        self.stream_scroll.setYRange(0,1,padding=.01)
-        # else:
-        # self.channel_count = 8
-        #   samples = 250
-        #   self.buffer_size = 2000
-        #   self.stream_scroll.setYRange(-.5,8,padding=.01)
+        self.stream_scroll.setYRange(-4,4,padding=.01)
 
-        # self.stream_scroll_time_axis = np.linspace(-5,0,samples)
-        self.stream_scroll.setXRange(0,100, padding=.01)
-        self.stream_scroll.setLabel('bottom','Time','Seconds')
-        self.stream_scroll.setLabel('left','Channel')
-        # for i in range(self.channel_count-1,-1,-1):
-        #   self.data_buffer['buffer_channel{}'.format(i+1)] = deque([0]*self.buffer_size)
-        #   self.filtered_data['filtered_channel{}'.format(i+1)] = deque([0]*samples)
-        #   self.curves['curve_channel{}'.format(i+1)] = self.stream_scroll.plot()
-        #   self.curves['curve_channel{}'.format(i+1)].setData(x=self.stream_scroll_time_axis,y=([point+i+1 for point in self.filtered_data['filtered_channel{}'.format(i+1)]]))
+        # self.stream_scroll.setXRange(0,100, padding=.01)
+        self.stream_scroll.setXRange(timestamp(), timestamp() + 100)
+
         self.layout = QtGui.QGridLayout()
-        self.stream_scroll.plotItem.showGrid(True, True, 0.7)
+        self.stream_scroll.plotItem.showGrid(True, True, .5)
         self.layout.addWidget(self.stream_scroll,0,0)
 
+        C=pg.hsvColor(.7,alpha=.5)
+        self.pen=pg.mkPen(color=C,width=1)
+        self.curve = self.stream_scroll.plot(pen=self.pen)
+
     def update1(self):
-        t1=time.process_time()
-        points=100 #number of data points
-        X=np.arange(points)
-        # Y=np.sin(np.arange(points)/points*3*np.pi+time.time())
-        Y=np.random.rand(100)
-        # C=pg.hsvColor(time.time()/5%1,alpha=.5) # Change color each tick
-        C=pg.hsvColor(0,alpha=.5)
-        pen=pg.mkPen(color=C,width=1)
-        self.stream_scroll.plot(X,Y,pen=pen,clear=True)
-        print("update took %.02f ms"%((time.process_time()-t1)*1000))
-        # if self.chkMore.isChecked():
-        #     QtCore.QTimer.singleShot(1, self.update) # QUICKLY repeat
+        # global data
+        if len(self.data) > 100:
+            self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
+            if self.cbDataSource.currentIndex() == 0:
+                self.data[-1] = np.random.rand() # .normal()
+            else:
+                self.data[-1] = self.FiledataConvert()
+            self.Xtime[:-1] = self.Xtime[1:]
+            self.Xtime[-1] = timestamp() # int(round(time.time()*1000))+100
+
+        else:
+            if self.cbDataSource.currentIndex() == 0:
+                self.data.append(np.random.rand())
+            else:
+                self.data.append(self.FiledataConvert())
+            self.Xtime.append(timestamp())
+
+        X = self.Xtime
+        # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
+        Y = self.data  # np.random.rand(100)
+        self.curve.setData(X, Y)
+
+    def FiledataConvert(self):
+        f = open("output1.txt", "r")
+        a = f.read()
+        f.close()
+        try:
+            a = round(int(a)/204, 3)
+            self.LEDError.setStyleSheet("background-color: blue")
+        except Exception as err:
+            datetimeObj = datetime.now()
+            a = 0
+            self.LEDError.setStyleSheet("background-color: red")
+            print(datetimeObj)
+            print(traceback.format_exc())   # display error
+            self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
+            self.label_ErrorReadEvents.setText(self.errReadEvent)
+            # print(sys.exc_info()[0])  # display error
+
+        return a
 
     def ticker(self):
         if self.RNDbtn == False:
             self.timer = pg.QtCore.QTimer()
             self.timer.timeout.connect(self.update1)
-            self.timer.start(1000)
-            print('started')
+            self.timer.start(self.refreshInterval)
             self.RNDbtn = True
             self.GetDataBtn.setStyleSheet("background-color: green")
             self.GetDataBtn.setText("Disconnect")
+
         else:
             self.timer.stop()
             self.RNDbtn = False
@@ -267,7 +357,7 @@ class Main_Window(QWidget):
     def CreateLyt_plotData(self, QMainWindow):
         hboxlayout_plt = QHBoxLayout()
         hboxPLT = QHBoxLayout()
-        self.groupBox_Plt = QGroupBox("Received data")
+        self.groupBox_Plt = QGroupBox("Data")
 
         # plotD = MyWindow()
         plotD = WindowPlot()
@@ -284,7 +374,7 @@ class Main_Window(QWidget):
 
         self.label_servE = QLabel()
         self.label_servE.setFont(QtGui.QFont("Sanserif", 10))
-        self.label_servE.setMaximumHeight(80)
+        # self.label_servE.setMaximumHeight(80)
         self.label_servE.setMinimumWidth(790)
 
         scroll = QScrollArea()
