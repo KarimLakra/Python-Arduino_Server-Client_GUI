@@ -1,4 +1,4 @@
-import getIP_List_func, sys, os, signal, socket, subprocess, netifaces, random, time
+import sys, os, signal, socket, subprocess, netifaces, random, time
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
     QDialog, QGroupBox, QHBoxLayout, QVBoxLayout, QBoxLayout, QLayout,
@@ -12,37 +12,8 @@ from PyQt5.QtCore import Qt as QTC
 import pyqtgraph as pg
 import numpy as np
 
-import matplotlib
-matplotlib.use('QT5Agg')
-
-import matplotlib.pylab as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-
 from XAxisTime import TimeAxisItem, timestamp
-
-# class MyWindow(QMainWindow):
-#     def __init__(self):
-#         super().__init__()
-#
-#         # uic.loadUi('test.ui', self)
-#         self.content_plot = QWidget(self)
-#         self.content_plot.resize(800, 350)
-#         self.content_plot.move(0,0)
-#
-#         # test data
-#         data = np.array([0.7,0.7,0.7,0.8,0.9,0.9,1.5,1.5,1.5,1.5])
-#         fig, ax1 = plt.subplots()
-#         bins = np.arange(0.6, 1.62, 0.02)
-#         n1, bins1, patches1 = ax1.hist(data, bins, alpha=0.6, density=False, cumulative=False)
-#         # plot
-#         self.plotWidget = FigureCanvas(fig)
-#         # lay = QtWidgets.QVBoxLayout(self.content_plot)
-#         lay = QtWidgets.QVBoxLayout(self.content_plot)
-#         lay.setContentsMargins(0, 0, 0, 0)
-#         lay.addWidget(self.plotWidget)
-#         # add toolbar
-#         self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(self.plotWidget, self))
+import getIP_List_func
 
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
@@ -72,11 +43,6 @@ class WindowPlot(QMainWindow):
 
         self.grid = QGridLayout()
 
-        self.GetDataBtn = QPushButton("Connect")
-        self.GetDataBtn.clicked.connect(self.ticker)
-        self.GetDataBtn.setMinimumHeight(50)
-        self.GetDataBtn.setMinimumWidth(180)
-
         self.slider = QSlider(QTC.Horizontal)
         self.slider.setFocusPolicy(QTC.StrongFocus)
         self.slider.setTickPosition(QSlider.TicksBothSides)
@@ -89,21 +55,62 @@ class WindowPlot(QMainWindow):
 
         self.cb = QtWidgets.QComboBox()
         # self.cb.addItem("10")
-        self.cb.addItems(["5000", "2000", "1000"])
+        self.cb.addItems(["5", "2", "1"])
         self.cb.setCurrentIndex(2)
         self.cb.currentIndexChanged.connect(self.ComboInterval)
 
+        self.Refr = QHBoxLayout()
+        self.labelInterval = QLabel()
+        self.labelInterval.setText("Refresh rate (s)")
+
+        self.Refr.addWidget(self.labelInterval)
+        self.Refr.addWidget(self.cb)
+
+        self.hboxErrorData = QHBoxLayout()
+
+        self.LEDError = QPushButton()   # used as error LED indicator
+        self.LEDError.setEnabled(False)
+        self.LEDError.setMaximumHeight(20)
+        self.LEDError.setMaximumWidth(20)
+
+        self.labelErrors = QLabel()
+        self.labelErrors.setText("Error reading data")
+
+        self.cbDataSource = QtWidgets.QComboBox()
+        # self.cb.addItem("10")
+        self.cbDataSource.addItems(["Random generated test Data", "Remote data"])
+        self.cbDataSource.setCurrentIndex(0)
+        self.cbDataSource.currentIndexChanged.connect(self.DataSource)
+
+        self.hboxErrorData.addWidget(self.LEDError)
+        self.hboxErrorData.addWidget(self.labelErrors)
+        self.hboxErrorData.addWidget(self.cbDataSource)
+
+        self.GetDataBtn = QPushButton("Connect")
+        self.GetDataBtn.clicked.connect(self.ticker)
+        self.GetDataBtn.setMinimumHeight(50)
+        self.GetDataBtn.setMinimumWidth(180)
+
+
         self.grid.addWidget(self.slider, 0, 0)
-        self.grid.addWidget(self.cb, 0, 1)
+        self.grid.addLayout(self.Refr, 0, 1)
+        self.grid.addLayout(self.hboxErrorData, 1, 0)
         self.grid.addWidget(self.GetDataBtn, 1, 1)
+
+
 
         vboxlayout.addLayout(self.grid)
         self.groupBox.setLayout(vboxlayout)
 
     # def SliderVal(self):
     #     print(self.slider.value())
+    def DataSource(self):
+        print(self.cbDataSource.currentText())
+        print(self.cbDataSource.currentIndex())
+
+
     def ComboInterval(self):
-        self.refreshInterval = int(self.cb.currentText())
+        self.refreshInterval = int(self.cb.currentText())*1000
         if self.timer.isActive():
             self.timer.stop()
             self.timer.start(self.refreshInterval)
@@ -132,16 +139,19 @@ class WindowPlot(QMainWindow):
     def update1(self):
         # global data
         if len(self.data) > 100:
-            print('Reached 100')
             self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
-            self.data[-1] = self.FiledataConvert()
-            # self.data[-1] = np.random.rand() # .normal()
+            if self.cbDataSource.currentIndex() == 0:
+                self.data[-1] = np.random.rand() # .normal()
+            else:
+                self.data[-1] = self.FiledataConvert()
             self.Xtime[:-1] = self.Xtime[1:]
             self.Xtime[-1] = timestamp() # int(round(time.time()*1000))+100
 
         else:
-            # self.data.append(np.random.rand())
-            self.data.append(self.FiledataConvert())
+            if self.cbDataSource.currentIndex() == 0:
+                self.data.append(np.random.rand())
+            else:
+                self.data.append(self.FiledataConvert())
             self.Xtime.append(timestamp())
 
         X = self.Xtime
@@ -152,9 +162,14 @@ class WindowPlot(QMainWindow):
 
     def FiledataConvert(self):
         f = open("output1.txt", "r")
-        a = round(int(f.read())/204, 3)
+        a = f.read()
         f.close()
-        print(a)
+        try:
+            a = round(int(a)/204, 3)
+            self.LEDError.setStyleSheet()
+        except:
+            a = 0
+            self.LEDError.setStyleSheet("background-color: red")
         return a
 
     def ticker(self):
