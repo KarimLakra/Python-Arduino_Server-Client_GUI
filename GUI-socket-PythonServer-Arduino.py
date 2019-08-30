@@ -16,12 +16,14 @@ import numpy as np
 from XAxisTime import TimeAxisItem, timestamp
 import getIP_List_func
 
+ServerStatus = False    # global server status
+
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
         pg.setConfigOption('background', 'w') #before loading widget
         super(WindowPlot, self).__init__(parent)
 
-        self.RNDbtn = False
+        self.ReadDbtn = False
         self.data = [] #np.random.normal(size=100)
         self.Xtime = []
         self.refreshInterval = 1000 # default refresh plot every 1s
@@ -115,6 +117,8 @@ class WindowPlot(QMainWindow):
         # Error box END
 
         self.GetDataBtn = QPushButton("Start Plot")
+        self.stream_scroll.enableAutoRange(enable=True) # move the plot to new data
+
         self.GetDataBtn.clicked.connect(self.ticker)
         self.GetDataBtn.setMinimumHeight(50)
         self.GetDataBtn.setMinimumWidth(180)
@@ -142,7 +146,6 @@ class WindowPlot(QMainWindow):
             self.timer.start(self.refreshInterval)
 
     def create_plot(self):
-
         self.stream_scroll = pg.PlotWidget(
             title='Stream Monitor',
             labels={'left': 'Channel'},
@@ -162,62 +165,79 @@ class WindowPlot(QMainWindow):
         self.pen=pg.mkPen(color=C,width=1)
         self.curve = self.stream_scroll.plot(pen=self.pen)
 
-    def update1(self):
-        # global data
-        if len(self.data) > 100:
-            self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
-            if self.cbDataSource.currentIndex() == 0:
-                self.data[-1] = np.random.rand() # .normal()
-            else:
-                self.data[-1] = self.FiledataConvert()
-            self.Xtime[:-1] = self.Xtime[1:]
-            self.Xtime[-1] = timestamp() # int(round(time.time()*1000))+100
+    def updatePlot(self):
+        global ServerStatus
+        if ServerStatus == True or self.cbDataSource.currentIndex() == 0:
+            if len(self.data) > 100:
+                self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
+                if self.cbDataSource.currentIndex() == 0:
+                    self.data[-1] = np.random.rand() # .normal()
+                else:
+                    self.data[-1] = self.FiledataConvert()
+                self.Xtime[:-1] = self.Xtime[1:]
+                self.Xtime[-1] = timestamp() # int(round(time.time()*1000))+100
 
+            else:
+                if self.cbDataSource.currentIndex() == 0:
+                    self.data.append(np.random.rand())
+                else:
+                    self.data.append(self.FiledataConvert())
+                self.Xtime.append(timestamp())
+
+            X = self.Xtime
+            # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
+            Y = self.data  # np.random.rand(100)
+            self.curve.setData(X, Y)
         else:
-            if self.cbDataSource.currentIndex() == 0:
-                self.data.append(np.random.rand())
-            else:
-                self.data.append(self.FiledataConvert())
-            self.Xtime.append(timestamp())
-
-        X = self.Xtime
-        # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
-        Y = self.data  # np.random.rand(100)
-        self.curve.setData(X, Y)
+            self.timer.stop()
+            self.ReadDbtn = False
+            self.GetDataBtn.setStyleSheet("background-color: red")
+            self.GetDataBtn.setText("Start Plot")
 
     def FiledataConvert(self):
-        f = open("output1.txt", "r")
-        a = f.read()
-        f.close()
+        def rdf():
+            f = open("output1.txt", "r")
+            dt = f.read()
+            f.close()
+            return dt
         try:
+            a = rdf()
             a = round(int(a)/204, 3)
             self.LEDError.setStyleSheet("background-color: blue")
         except Exception as err:
+            # DEBUG _ show that error reading data happened
             datetimeObj = datetime.now()
-            a = 0
+            print('Error at :' + str(datetimeObj))
             self.LEDError.setStyleSheet("background-color: red")
-            print(datetimeObj)
-            print(traceback.format_exc())   # display error
             self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
             self.label_ErrorReadEvents.setText(self.errReadEvent)
-            # print(sys.exc_info()[0])  # display error
-
+            # this error happen when the open file fail
+            # solved by waiting 3s and retry reading again
+            time.sleep(3)
+            a = rdf()
+            a = round(int(a)/204, 3)
         return a
 
     def ticker(self):
-        if self.RNDbtn == False:
-            self.timer = pg.QtCore.QTimer()
-            self.timer.timeout.connect(self.update1)
-            self.timer.start(self.refreshInterval)
-            self.RNDbtn = True
-            self.GetDataBtn.setStyleSheet("background-color: green")
-            self.GetDataBtn.setText("Disconnect")
+        datetimeObj = datetime.now()
+        global ServerStatus
+        if (self.ReadDbtn == False and ServerStatus == True) or (self.ReadDbtn == False and self.cbDataSource.currentIndex() == 0):
+            # DEBUG_ print time reading data started
+            print('Reading started at : ' + str(datetimeObj))
 
-        else:
+            self.timer = pg.QtCore.QTimer()
+            self.timer.timeout.connect(self.updatePlot)
+            self.timer.start(self.refreshInterval)
+            self.ReadDbtn = True
+            self.GetDataBtn.setStyleSheet("background-color: green")
+            self.GetDataBtn.setText("Stop Plot")
+
+        elif (self.ReadDbtn == True and ServerStatus == True) or (self.ReadDbtn == True and self.cbDataSource.currentIndex() == 0):
+            print('Reading stopped at : ' + str(datetimeObj))
             self.timer.stop()
-            self.RNDbtn = False
+            self.ReadDbtn = False
             self.GetDataBtn.setStyleSheet("background-color: red")
-            self.GetDataBtn.setText("Connect")
+            self.GetDataBtn.setText("Start Plot")
 
 class Main_Window(QWidget):
     def __init__(self):
@@ -225,6 +245,7 @@ class Main_Window(QWidget):
 
         self.RNDbtn = False
         self.InitWindow()
+
 
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
@@ -389,7 +410,7 @@ class Main_Window(QWidget):
 
 
     def ChooseIP(self):
-        dlg = getIP_List_func.CustomDialog(self)
+        dlg = getIP_List_func.FindAdapter(self)
         if dlg.exec_():
             # print(dlg.IPselected)
             # self.label.setText(dlg.IPselected)
@@ -397,6 +418,8 @@ class Main_Window(QWidget):
             self.ServerIP.setText(self.IPSel)
 
     def SConnect(self):
+        global ServerStatus
+        ServerStatus = True
         print("Server is running")
         # with open('output.txt', 'w') as f:
             # self.p = subprocess.Popen(["python", "-u", "ArduinoSocket.py","name1","name2","name3"] , stdout = f)
@@ -411,6 +434,8 @@ class Main_Window(QWidget):
             subprocess.Popen(["python", "-u", "ArduinoSocket.py", ipServ, portN] , stdout = f) # shell = True)
 
     def SDisconnect(self):
+        global ServerStatus
+        ServerStatus = False
         cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
         os.system(cmd)
         self.timer.stop()
