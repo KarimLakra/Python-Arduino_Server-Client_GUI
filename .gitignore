@@ -1,7 +1,8 @@
-#/Notes
 output*
-#test*
+test*
 bat.bat
 __pycache__/
 *.py[cod]
 *$py.class
+EmptyWindow*
+#getIP_List_func2*

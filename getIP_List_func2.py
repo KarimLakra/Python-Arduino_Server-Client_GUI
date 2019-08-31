@@ -1,4 +1,5 @@
 import netifaces
+
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, \
 QGroupBox, QBoxLayout, QListView, QLabel
 from PyQt5 import QtCore
@@ -29,14 +30,14 @@ class FindAdapter(QDialog):
         group.setTitle("Adapters list")
         self.layout.addWidget(group)
 
-        view = QListView(self)
-        self.model = QStandardItemModel()
-        view.clicked.connect(self.treeView_ItemSelected)
+        # view = QListView(self)
+        # self.model = QStandardItemModel()
+        # view.clicked.connect(self.treeView_ItemSelected)
 
-        self.list_IP = self.listAddrs()
+        # self.list_IP = self.listAddrs()
 
-        view.setModel(self.model)
-        box.addWidget(view)
+        # view.setModel(self.model)
+        # box.addWidget(view)
 
         self.HLayout = QHBoxLayout()
 
@@ -50,23 +51,5 @@ class FindAdapter(QDialog):
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
 
-    @QtCore.pyqtSlot(QtCore.QModelIndex)
-    def treeView_ItemSelected(self, index):
-        # print ('selected item index found at %s with data: %s' % (index.row(), str(index.data())))
-        # print(self.list_IP[index.row()])
-        self.IPselected = self.list_IP[index.row()]
 
-    def listAddrs(self):
-        listIP = []
-        ad = netifaces.interfaces()
-        for adpt in ad:
-            # print(netifaces.ifaddresses(adpt))
-            va = netifaces.ifaddresses(adpt)
-            if 2 in va:
-                adapt = netifaces.ifaddresses(adpt)[2][0] # ['addr']
-                # print(adapt)
-                self.model.appendRow(QStandardItem('addr: ' + adapt['addr'] +
-                '  netmask: ' + adapt['netmask'] +
-                '  broadcast: ' + adapt['broadcast']))
-                listIP.append(adapt['addr'])
-        return listIP
+        
