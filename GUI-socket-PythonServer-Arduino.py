@@ -18,6 +18,37 @@ import getIP_List_func
 
 ServerStatus = False    # global server status
 
+class DigitalIN_OUT(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        vbox = QVBoxLayout()
+        self.InitLEDS()
+        vbox.addWidget(self.groupBoxLEDS)
+        self.setLayout(vbox)
+
+    def InitLEDS(self):
+        hboxlayoutLEDS = QHBoxLayout()
+        # hboxlayout.setSizeConstraint(QLayout.SetFixedSize)
+        self.groupBoxLEDS = QGroupBox("Digital Inputs/Outputs")
+
+        self.gridLEDs = QtWidgets.QGridLayout()
+        Col1 = 0
+        g = [[0,0],[0,1],[1,0],[1,1]]
+        t = ["D2","D3","D4","D5"]
+        for i in range(4):
+            LEDs = QtWidgets.QPushButton(t[i])
+            LEDs.setEnabled(False)
+            LEDs.setMaximumHeight(40)
+            LEDs.setMaximumWidth(40)
+            self.gridLEDs.addWidget(LEDs, g[i][0], g[i][1])
+            Col1 += 1
+
+        hboxlayoutLEDS.addLayout(self.gridLEDs)
+        self.groupBoxLEDS.setLayout(hboxlayoutLEDS)
+
+
+
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
         pg.setConfigOption('background', 'w') #before loading widget
@@ -151,7 +182,7 @@ class WindowPlot(QMainWindow):
             labels={'left': 'Channel'},
             axisItems={'bottom': TimeAxisItem(orientation='bottom')}
         )
-
+        self.stream_scroll.setMinimumHeight(200)
         self.stream_scroll.setYRange(-4,4,padding=.01)
 
         # self.stream_scroll.setXRange(0,100, padding=.01)
@@ -165,21 +196,36 @@ class WindowPlot(QMainWindow):
         self.pen=pg.mkPen(color=C,width=1)
         self.curve = self.stream_scroll.plot(pen=self.pen)
 
+        C1=pg.hsvColor(.6,alpha=.5)
+        self.pen1=pg.mkPen(color=C1,width=1)
+        self.curve1 = self.stream_scroll.plot(pen=self.pen1)
+
+        C2=pg.hsvColor(.5,alpha=.5)
+        self.pen2=pg.mkPen(color=C2,width=1)
+        self.curve2 = self.stream_scroll.plot(pen=self.pen2)
+
+
+
+
+
     def updatePlot(self):
         global ServerStatus
+        # Plot only if data is available, else stop and switch button off
         if ServerStatus == True or self.cbDataSource.currentIndex() == 0:
+            # check if buffer size is 100, start to empty old and append new, else append to buffer
             if len(self.data) > 100:
                 self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
                 if self.cbDataSource.currentIndex() == 0:
-                    self.data[-1] = np.random.rand() # .normal()
+                    self.data[-1] = np.random.randint(20) # .normal()
                 else:
                     self.data[-1] = self.FiledataConvert()
                 self.Xtime[:-1] = self.Xtime[1:]
-                self.Xtime[-1] = timestamp() # int(round(time.time()*1000))+100
+                self.Xtime[-1] = timestamp()
 
             else:
                 if self.cbDataSource.currentIndex() == 0:
-                    self.data.append(np.random.rand())
+                    # self.data.append(np.random.rand())
+                    self.data.append(np.random.randint(20))
                 else:
                     self.data.append(self.FiledataConvert())
                 self.Xtime.append(timestamp())
@@ -187,7 +233,17 @@ class WindowPlot(QMainWindow):
             X = self.Xtime
             # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
             Y = self.data  # np.random.rand(100)
+
+            # Plot data
             self.curve.setData(X, Y)
+
+            data2 = [y-10 for y in Y]
+            self.curve1.setData(X, data2)
+
+            data3 = [y+5 for y in Y]
+            self.curve2.setData(X, data3)
+
+
         else:
             self.timer.stop()
             self.ReadDbtn = False
@@ -250,7 +306,7 @@ class Main_Window(QWidget):
     def InitWindow(self):
         self.setWindowIcon(QtGui.QIcon("network-port-icon.png"))
         self.setWindowTitle("Socket Server")
-        self.setGeometry(500, 200, 800, 800)
+        self.setGeometry(500, 50, 800, 800)
 
         self.createLayout1()
         self.createLayout2()
@@ -376,16 +432,17 @@ class Main_Window(QWidget):
         self.groupBox2.setLayout(hboxDebug)
 
     def CreateLyt_plotData(self, QMainWindow):
-        hboxlayout_plt = QHBoxLayout()
-        hboxPLT = QHBoxLayout()
+        vboxlayout_plt = QVBoxLayout()
+        # hboxPLT = QHBoxLayout()
         self.groupBox_Plt = QGroupBox("Data")
 
-        # plotD = MyWindow()
+        DigiInOut = DigitalIN_OUT()
         plotD = WindowPlot()
 
-        hboxlayout_plt.addWidget(plotD)
+        vboxlayout_plt.addWidget(DigiInOut)
+        vboxlayout_plt.addWidget(plotD)
         # hboxlayout_plt.addStretch()
-        self.groupBox_Plt.setLayout(hboxlayout_plt)
+        self.groupBox_Plt.setLayout(vboxlayout_plt)
 
 
     def createLyt_ServerEvents(self):
