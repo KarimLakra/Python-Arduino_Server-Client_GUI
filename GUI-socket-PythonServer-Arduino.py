@@ -17,6 +17,7 @@ from XAxisTime import TimeAxisItem, timestamp
 import getIP_List_func
 
 ServerStatus = False    # global server status
+DataBuffer = [] # global Data received from socket
 
 class DigitalIN_OUT(QWidget):
     def __init__(self):
@@ -27,25 +28,55 @@ class DigitalIN_OUT(QWidget):
         vbox.addWidget(self.groupBoxLEDS)
         self.setLayout(vbox)
 
+
     def InitLEDS(self):
         hboxlayoutLEDS = QHBoxLayout()
         # hboxlayout.setSizeConstraint(QLayout.SetFixedSize)
         self.groupBoxLEDS = QGroupBox("Digital Inputs/Outputs")
 
-        self.gridLEDs = QtWidgets.QGridLayout()
-        Col1 = 0
-        g = [[0,0],[0,1],[1,0],[1,1]]
-        t = ["D2","D3","D4","D5"]
-        for i in range(4):
-            LEDs = QtWidgets.QPushButton(t[i])
-            LEDs.setEnabled(False)
-            LEDs.setMaximumHeight(40)
-            LEDs.setMaximumWidth(40)
-            self.gridLEDs.addWidget(LEDs, g[i][0], g[i][1])
-            Col1 += 1
+        self.GridDigiIO = QtWidgets.QGridLayout()
 
-        hboxlayoutLEDS.addLayout(self.gridLEDs)
+        self.DigiIO2 = QtWidgets.QPushButton("D2")
+        self.DigiIO2.setEnabled(False)
+        self.DigiIO2.setMaximumHeight(40)
+        self.DigiIO2.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO2, 0, 0)
+
+        self.DigiIO3 = QtWidgets.QPushButton("D3")
+        self.DigiIO3.setEnabled(False)
+        self.DigiIO3.setMaximumHeight(40)
+        self.DigiIO3.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO3, 0, 1)
+
+        self.DigiIO4 = QtWidgets.QPushButton("D4")
+        self.DigiIO4.setEnabled(False)
+        self.DigiIO4.setMaximumHeight(40)
+        self.DigiIO4.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO4, 1, 0)
+
+        self.DigiIO5 = QtWidgets.QPushButton("D5")
+        self.DigiIO5.setObjectName("New")
+        self.DigiIO5.setEnabled(False)
+        self.DigiIO5.setMaximumHeight(40)
+        self.DigiIO5.setMaximumWidth(40)
+        self.DigiIO5.clicked.connect(self.updateLED)
+        self.GridDigiIO.addWidget(self.DigiIO5, 1, 1)
+
+        hboxlayoutLEDS.addLayout(self.GridDigiIO)
         self.groupBoxLEDS.setLayout(hboxlayoutLEDS)
+
+
+    def updateLED(self):
+        self.DigiIO5.setStyleSheet("background-color: green")
+        # global ServerStatus, DataBuffer
+        # stat_D5 = int(DataBuffer[7][2])
+        # if stat_D5 == 1:
+        #     print('High')
+        #     self.DigiIO5.setStyleSheet("background-color: green")
+        # else:
+        #     print('Low')
+        #     self.DigiIO5.setStyleSheet("background-color: red")
+
 
 
 
@@ -55,7 +86,16 @@ class WindowPlot(QMainWindow):
         super(WindowPlot, self).__init__(parent)
 
         self.ReadDbtn = False
-        self.data = [] #np.random.normal(size=100)
+        self.Buffer_AnalogA0 = [] #np.random.normal(size=100)
+        self.Buffer_AnalogA1 = []
+        self.Buffer_AnalogA2 = []
+        self.Buffer_AnalogA3 = []
+        self.Buffer_D2 = []
+        self.Buffer_D3 = []
+        self.Buffer_D4 = []
+        self.Buffer_D5 = []
+
+
         self.Xtime = []
         self.refreshInterval = 1000 # default refresh plot every 1s
         self.timer = pg.QtCore.QTimer()
@@ -66,10 +106,48 @@ class WindowPlot(QMainWindow):
         self.setCentralWidget(self.wid)
 
         vbox = QVBoxLayout()
+        self.InitLEDS()
         self.createLayout1()
+        vbox.addWidget(self.groupBoxLEDS)
         vbox.addWidget(self.groupBoxPlot)
         vbox.addWidget(self.groupBoxData)
         self.wid.setLayout(vbox)
+
+
+    def InitLEDS(self):
+        hboxlayoutLEDS = QHBoxLayout()
+        # hboxlayout.setSizeConstraint(QLayout.SetFixedSize)
+        self.groupBoxLEDS = QGroupBox("Digital Inputs/Outputs")
+
+        self.GridDigiIO = QtWidgets.QGridLayout()
+
+        self.DigiIO2 = QtWidgets.QPushButton("D2")
+        self.DigiIO2.setEnabled(False)
+        self.DigiIO2.setMaximumHeight(40)
+        self.DigiIO2.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO2, 0, 0)
+
+        self.DigiIO3 = QtWidgets.QPushButton("D3")
+        self.DigiIO3.setEnabled(False)
+        self.DigiIO3.setMaximumHeight(40)
+        self.DigiIO3.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO3, 0, 1)
+
+        self.DigiIO4 = QtWidgets.QPushButton("D4")
+        self.DigiIO4.setEnabled(False)
+        self.DigiIO4.setMaximumHeight(40)
+        self.DigiIO4.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO4, 1, 0)
+
+        self.DigiIO5 = QtWidgets.QPushButton("D5")
+        self.DigiIO5.setObjectName("New")
+        self.DigiIO5.setEnabled(False)
+        self.DigiIO5.setMaximumHeight(40)
+        self.DigiIO5.setMaximumWidth(40)
+        self.GridDigiIO.addWidget(self.DigiIO5, 1, 1)
+
+        hboxlayoutLEDS.addLayout(self.GridDigiIO)
+        self.groupBoxLEDS.setLayout(hboxlayoutLEDS)
 
 
     def createLayout1(self):
@@ -204,44 +282,106 @@ class WindowPlot(QMainWindow):
         self.pen2=pg.mkPen(color=C2,width=1)
         self.curve2 = self.stream_scroll.plot(pen=self.pen2)
 
-
-
+        C3=pg.hsvColor(.4,alpha=.5)
+        self.pen3=pg.mkPen(color=C3,width=1)
+        self.curve3 = self.stream_scroll.plot(pen=self.pen3)
 
 
     def updatePlot(self):
-        global ServerStatus
+        global ServerStatus, DataBuffer
         # Plot only if data is available, else stop and switch button off
         if ServerStatus == True or self.cbDataSource.currentIndex() == 0:
-            # check if buffer size is 100, start to empty old and append new, else append to buffer
-            if len(self.data) > 100:
-                self.data[:-1] = self.data[1:] # shift data in the array one, see also np.pull
-                if self.cbDataSource.currentIndex() == 0:
-                    self.data[-1] = np.random.randint(20) # .normal()
-                else:
-                    self.data[-1] = self.FiledataConvert()
-                self.Xtime[:-1] = self.Xtime[1:]
-                self.Xtime[-1] = timestamp()
+            # data format [['A0', 'I', '703'], ['A1', 'I', '55'], ['A2', 'I', '56'], ['A3', 'I', '57'], ['D2', 'I', '1'], ['D3', 'I', '1'], ['D4', 'I', '0'], ['D5', 'I', '1']]
+            DataBuffer = self.FiledataConvert()
 
+            if not len((DataBuffer)[0][0])==0:
+                # if buffer reading success continue, else escape to next
+                # data to prevent the script from stopping
+
+                if int(DataBuffer[4][2])==1:
+                    self.DigiIO2.setStyleSheet("background-color: green") # update DigiIO for digital IO
+                else:
+                    self.DigiIO2.setStyleSheet("background-color: red")
+
+                if int(DataBuffer[5][2])==1:
+                    self.DigiIO3.setStyleSheet("background-color: green")
+                else:
+                    self.DigiIO3.setStyleSheet("background-color: red")
+
+                if int(DataBuffer[6][2])==1:
+                    self.DigiIO4.setStyleSheet("background-color: green")
+                else:
+                    self.DigiIO4.setStyleSheet("background-color: red")
+
+                if int(DataBuffer[7][2])==1:
+                    self.DigiIO5.setStyleSheet("background-color: green")
+                else:
+                    self.DigiIO5.setStyleSheet("background-color: red")
+
+                def readAnalog(indx):
+                    a = DataBuffer[indx][2]
+                    b = DataBuffer[indx][0]
+                    a = round(int(a)/204, 3)
+                    return a, b
+
+                # check if buffer size is 100, start to empty old and append new, else append to buffer
+                if len(self.Buffer_AnalogA0) > 100:
+                    self.Buffer_AnalogA0[:-1] = self.Buffer_AnalogA0[1:] # shift data in the array one, see also np.pull
+                    self.Buffer_AnalogA1[:-1] = self.Buffer_AnalogA1[1:]
+                    self.Buffer_AnalogA2[:-1] = self.Buffer_AnalogA2[1:]
+                    self.Buffer_AnalogA3[:-1] = self.Buffer_AnalogA3[1:]
+
+                    if self.cbDataSource.currentIndex() == 0:
+                        self.Buffer_AnalogA0[-1] = np.random.randint(20) # .normal()
+                    else:
+                        a0 = readAnalog(0)[0]
+                        self.Buffer_AnalogA0[-1] = a0
+                        a1 = readAnalog(1)[0]
+                        self.Buffer_AnalogA1[-1] = a1
+                        a2 = readAnalog(2)[0]
+                        self.Buffer_AnalogA2[-1] = a2
+                        a3 = readAnalog(3)[0]
+                        self.Buffer_AnalogA3[-1] = a3
+
+                    self.Xtime[:-1] = self.Xtime[1:]
+                    self.Xtime[-1] = timestamp()
+
+                else:
+                    if self.cbDataSource.currentIndex() == 0:
+                        # self.data.append(np.random.rand())
+                        self.Buffer_AnalogA0.append(np.random.randint(20))
+                    else:
+                        a0 = readAnalog(0)[0]
+                        # print(readAnalog(0)[1])   # channel name A0
+                        # print(readAnalog(0)[2])   # input/output: I
+                        self.Buffer_AnalogA0.append(a0)
+                        a1 = readAnalog(1)[0]
+                        self.Buffer_AnalogA1.append(a1)
+                        a2 = readAnalog(2)[0]
+                        self.Buffer_AnalogA2.append(a2)
+                        a3 = readAnalog(3)[0]
+                        self.Buffer_AnalogA3.append(a3)
+
+                    self.Xtime.append(timestamp())
+
+                X = self.Xtime
+                # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
+                Y0 = self.Buffer_AnalogA0  # np.random.rand(100)
+                Y1 = self.Buffer_AnalogA1
+                Y2 = self.Buffer_AnalogA2
+                Y3 = self.Buffer_AnalogA3
+                # Plot data
+                self.curve.setData(X, Y0)
+                self.curve1.setData(X, Y1)
+                self.curve2.setData(X, Y2)
+                self.curve3.setData(X, Y3)
             else:
-                if self.cbDataSource.currentIndex() == 0:
-                    # self.data.append(np.random.rand())
-                    self.data.append(np.random.randint(20))
-                else:
-                    self.data.append(self.FiledataConvert())
-                self.Xtime.append(timestamp())
-
-            X = self.Xtime
-            # Y=np.sin(np.arange(points)/points*3*np.pi+time.time()) # draw sin wave
-            Y = self.data  # np.random.rand(100)
-
-            # Plot data
-            self.curve.setData(X, Y)
-
-            data2 = [y-10 for y in Y]
-            self.curve1.setData(X, data2)
-
-            data3 = [y+5 for y in Y]
-            self.curve2.setData(X, data3)
+                datetimeObj = datetime.now()
+                self.LEDError.setStyleSheet("background-color: red")
+                errmsg = 'Error reading Buffer at:' +  str(datetimeObj)
+                self.errReadEvent = self.errReadEvent + errmsg + '\n'
+                self.label_ErrorReadEvents.setText(self.errReadEvent)
+                print(errmsg)
 
 
         else:
@@ -255,24 +395,24 @@ class WindowPlot(QMainWindow):
             f = open("output1.txt", "r")
             dt = f.read()
             f.close()
+            dt = dt.split("-")
+            for index, line in enumerate(dt):
+                dt[index] = line.split(':')
             return dt
-        try:
-            a = rdf()
-            a = round(int(a)/204, 3)
-            self.LEDError.setStyleSheet("background-color: blue")
-        except Exception as err:
-            # DEBUG _ show that error reading data happened
-            datetimeObj = datetime.now()
-            print('Error at :' + str(datetimeObj))
-            self.LEDError.setStyleSheet("background-color: red")
-            self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
-            self.label_ErrorReadEvents.setText(self.errReadEvent)
-            # this error happen when the open file fail
-            # solved by waiting 3s and retry reading again
-            time.sleep(3)
-            a = rdf()
-            a = round(int(a)/204, 3)
+
+        a = rdf()
+        # if len((a)[0][0])==0:
+        #     datetimeObj = datetime.now()
+        #     print('Error at :' + str(datetimeObj))
+        #     self.LEDError.setStyleSheet("background-color: red")
+        #     self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
+        #     self.label_ErrorReadEvents.setText(self.errReadEvent)
+        #     time.sleep(3)
+        #     a = rdf()
+        # a = round(int(a)/204, 3)
+        self.LEDError.setStyleSheet("background-color: blue")
         return a
+
 
     def ticker(self):
         datetimeObj = datetime.now()
@@ -436,10 +576,10 @@ class Main_Window(QWidget):
         # hboxPLT = QHBoxLayout()
         self.groupBox_Plt = QGroupBox("Data")
 
-        DigiInOut = DigitalIN_OUT()
+        # DigiInOut = DigitalIN_OUT()
         plotD = WindowPlot()
 
-        vboxlayout_plt.addWidget(DigiInOut)
+        # vboxlayout_plt.addWidget(DigiInOut)
         vboxlayout_plt.addWidget(plotD)
         # hboxlayout_plt.addStretch()
         self.groupBox_Plt.setLayout(vboxlayout_plt)
