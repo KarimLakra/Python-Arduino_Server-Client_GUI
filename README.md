@@ -1,5 +1,5 @@
-# Python-Arduino_Server-Client_GUI
-A python server managed by a GUI connects an Arduino client to receive data
+# Python-Arduino Server-Client GUI socket
+A python server using socket communication managed by a GUI connects an Arduino client to receive data
 
 <p>
   <b>The main window:</b>
