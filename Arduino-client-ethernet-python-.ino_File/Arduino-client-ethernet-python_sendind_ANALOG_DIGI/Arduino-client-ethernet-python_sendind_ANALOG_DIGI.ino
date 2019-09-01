@@ -1,12 +1,11 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-//Testing a keypad UP DOWN LEFT RIGHT OK
-int UP = A0, LEFT = A1, OK = A2, RIGHT = A3, DOWN = A4;
-int UPState, LEFTState, OKState,RIGHTState, DOWNState;
+int analogPinA0 = A0;
+
+int val = 0;  // variable to store the value read
 int con = 0;// connection status
 
-String pressed=""; //Pressed button
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
@@ -27,11 +26,13 @@ EthernetClient client;
 void setup() {
 
   pinMode(7,OUTPUT);
-  pinMode(A0, INPUT_PULLUP);
-  pinMode(A1, INPUT_PULLUP);
-  pinMode(A2, INPUT_PULLUP);
-  pinMode(A3, INPUT_PULLUP);
-  pinMode(A4, INPUT_PULLUP);
+  pinMode(2,INPUT);
+  pinMode(3,INPUT);
+  pinMode(4,INPUT);
+  pinMode(5,INPUT);
+  pinMode(6,INPUT);
+  
+  
 
   // You can use Ethernet.init(pin) to configure the CS pin
   //Ethernet.init(10);  // Most Arduino shields
@@ -85,50 +86,12 @@ void setup() {
 }
 
 void loop() {
-
-  pressed = "";//no button pressed
-  UPState = analogRead(UP);
-  LEFTState = analogRead(LEFT);
-  OKState = analogRead(OK);
-  RIGHTState = analogRead(RIGHT);
-  DOWNState = analogRead(DOWN);
-
-  if(UPState <= 100){pressed = "UP";}
-  if(LEFTState <= 100){pressed = "LEFT";}
-  if(OKState <= 100){pressed = "OK";}
-  if(RIGHTState <= 100){pressed = "RIGHT";}
-  if(DOWNState <= 100){pressed = "DOWN";}
-
-  if(pressed != ""){
-      Serial.print("Pressed button :");
-      Serial.println(pressed);
-      if (client.connected()) {
-        client.println(pressed);
-      }
-    }
-
-  while (Serial.available() > 0) {
-    char inChar = Serial.read();
-    if (client.connected()) {
-      client.print(inChar);
-    }
+//  Serial.println(val);          // debug value
+  if (client.connected()) {
+    val = analogRead(analogPinA0);  // read the input pin
+    client.println(val);
   }
-
-  // if there are incoming bytes available
-  // from the server, read them and print them:
-  if (client.available()) {
-    char c = client.read();
-    Serial.print(c);
-  }
-
-  // as long as there are bytes in the serial queue,
-  // read them and send them out the socket if it's open:
-//  while (Serial.available() > 0) {
-//    char inChar = Serial.read();
-//    if (client.connected()) {
-//      client.print(inChar);
-//    }
-//  }
+  Serial.println(val);
 
   if (!client.connected()) {
     digitalWrite(7, LOW);
@@ -144,15 +107,5 @@ void loop() {
       delay(1);
     }
   }
-
-  // if the server's disconnected, stop the client:
-//  if (!client.connected()) {
-//    Serial.println();
-//    Serial.println("disconnecting.");
-//    client.stop();
-//    // do nothing:
-//    while (true) {
-//      delay(1);
-//    }
-//  }
+  delay(1000);
 }
