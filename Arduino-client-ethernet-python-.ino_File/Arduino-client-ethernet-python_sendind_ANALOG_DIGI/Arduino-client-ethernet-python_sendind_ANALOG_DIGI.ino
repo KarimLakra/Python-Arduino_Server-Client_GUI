@@ -1,9 +1,11 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-int analogPinA0 = A0;
+int analogA0 = A0, analogA1 = A1, analogA2 = A2, analogA3 = A3;
+int digi2 = 2, digi3 = 3, digi4 = 4, digi5 = 5;
 
-int val = 0;  // variable to store the value read
+
+String val = "";  // variable to store the value read
 int con = 0;// connection status
 
 
@@ -26,27 +28,17 @@ EthernetClient client;
 void setup() {
 
   pinMode(7,OUTPUT);
-  pinMode(2,INPUT);
-  pinMode(3,INPUT);
-  pinMode(4,INPUT);
-  pinMode(5,INPUT);
-  pinMode(6,INPUT);
   
+  pinMode(2,INPUT_PULLUP);
+  pinMode(3,INPUT_PULLUP);
+  pinMode(4,INPUT_PULLUP);
+  pinMode(5,INPUT_PULLUP);
   
-
-  // You can use Ethernet.init(pin) to configure the CS pin
-  //Ethernet.init(10);  // Most Arduino shields
-  //Ethernet.init(5);   // MKR ETH shield
-  //Ethernet.init(0);   // Teensy 2.0
-  //Ethernet.init(20);  // Teensy++ 2.0
-  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
-
   // start the Ethernet connection:
   Ethernet.begin(mac, ip);
 
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(115200);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -86,12 +78,24 @@ void setup() {
 }
 
 void loop() {
-//  Serial.println(val);          // debug value
+
+  analogA0 = analogRead(A0);  // read the input pin
+  analogA1 = analogRead(A1);  // read the input pin
+  analogA2 = analogRead(A2);  // read the input pin
+  analogA3 = analogRead(A3);  // read the input pin
+  
+  digi2 = digitalRead(2);  // read the input pin
+  digi3 = digitalRead(3);  // read the input pin
+  digi4 = digitalRead(4);  // read the input pin
+  digi5 = digitalRead(5);  // read the input pin
+  val = "A0:I:"+String(analogA0)+"-A1:I:"+String(analogA1)+"-A2:I:"+String(analogA2)+"-A3:I:"+String(analogA3)+"-D2:I:"+String(digi2)+"-D3:I:"+String(digi3)+"-D4:I:"+String(digi4)+"-D5:I:"+String(digi5);
+  
+  Serial.println(val);          // debug value
+
   if (client.connected()) {
-    val = analogRead(analogPinA0);  // read the input pin
     client.println(val);
   }
-  Serial.println(val);
+  //Serial.println(val);
 
   if (!client.connected()) {
     digitalWrite(7, LOW);
