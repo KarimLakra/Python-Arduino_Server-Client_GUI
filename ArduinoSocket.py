@@ -18,13 +18,23 @@ sock.bind(server_address)
 sock.listen(1)
 try:
     while True:
+        def initCom():
+            def iniAll(f):
+                f = open(f, "w").close()    # clear data buffer init
+
+            # iniAll("output.txt")    # clear server events
+            iniAll("output1.txt")   # clear data buffer
+            iniAll("com")           # clear server-client feedback file
 
         try:
+            f = open("com", "w")
+            f.write("Wait")
+            f.close()    # set com to True, for ready to read data
             # Wait for a connection
             print('waiting for a client connection...')
             connection, client_address = sock.accept()
             print('connection from %s:%d' % client_address)
-            connection.settimeout(60)   # reset the connection to client if no data is received after 60s
+            connection.settimeout(30)   # reset the connection to client if no data is received after 60s
             while True:
                 # Receive the data one byte at a time
                 data = connection.recv(1)
@@ -36,12 +46,17 @@ try:
                             # print(dataInt)
                             f1.write(dataInt)
                             dataInt = ''
+                            f = open("com", "w")
+                            f.write("True")
+                            f.close()    # set com to True, for ready to read data
+
                     # Send back in uppercase
                     # connection.sendall(data.upper())
         except socket.timeout as e:
             err = e.args[0]
             if err == 'timed out':
                 print ('received timed out, Client disconnected. ')
+                initCom()
                 connection.close()
                 print('Opening new connection... ')
                 continue

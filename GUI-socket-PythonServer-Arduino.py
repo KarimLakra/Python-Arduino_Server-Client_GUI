@@ -1,4 +1,4 @@
-import sys, os, signal, socket, subprocess, netifaces, random, time, traceback
+import sys, os, signal, socket, subprocess, netifaces, random, time, traceback, numbers
 from datetime import datetime
 
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QLabel, QPushButton,
@@ -82,7 +82,7 @@ class DigitalIN_OUT(QWidget):
 
 class WindowPlot(QMainWindow):
     def __init__(self, parent=None):
-        pg.setConfigOption('background', 'w') #before loading widget
+        # pg.setConfigOption('background', 'w') #before loading widget
         super(WindowPlot, self).__init__(parent)
 
         self.ReadDbtn = False
@@ -94,7 +94,6 @@ class WindowPlot(QMainWindow):
         self.Buffer_D3 = []
         self.Buffer_D4 = []
         self.Buffer_D5 = []
-
 
         self.Xtime = []
         self.refreshInterval = 1000 # default refresh plot every 1s
@@ -183,6 +182,7 @@ class WindowPlot(QMainWindow):
 
         self.Refr.addWidget(self.labelInterval)
         self.Refr.addWidget(self.cb)
+        self.Refr.addStretch()
 
         # Error box START
         self.hboxErrSourceDt = QHBoxLayout()
@@ -256,8 +256,8 @@ class WindowPlot(QMainWindow):
 
     def create_plot(self):
         self.stream_scroll = pg.PlotWidget(
-            title='Stream Monitor',
-            labels={'left': 'Channel'},
+            title='Received data',
+            labels={'left': 'Channels'},
             axisItems={'bottom': TimeAxisItem(orientation='bottom')}
         )
         self.stream_scroll.setMinimumHeight(200)
@@ -293,11 +293,22 @@ class WindowPlot(QMainWindow):
         if ServerStatus == True or self.cbDataSource.currentIndex() == 0:
             # data format [['A0', 'I', '703'], ['A1', 'I', '55'], ['A2', 'I', '56'], ['A3', 'I', '57'], ['D2', 'I', '1'], ['D3', 'I', '1'], ['D4', 'I', '0'], ['D5', 'I', '1']]
             DataBuffer = self.FiledataConvert()
-
-            if not len((DataBuffer)[0][0])==0:
+            # if not len((DataBuffer)[0][0])==0:
+            # print(type(DataBuffer))
+            if isinstance(DataBuffer, numbers.Integral):
+                if DataBuffer == 1:
+                    print("waiting for client")
+                elif DataBuffer == 0:
+                    datetimeObj = datetime.now()
+                    self.LEDError.setStyleSheet("background-color: red")
+                    errmsg = 'Error reading Buffer at:' +  str(datetimeObj)
+                    self.errReadEvent = self.errReadEvent + errmsg + '\n'
+                    self.label_ErrorReadEvents.setText(self.errReadEvent)
+                    print(errmsg)
+            else:
                 # if buffer reading success continue, else escape to next
                 # data to prevent the script from stopping
-
+                # print(DataBuffer[4])
                 if int(DataBuffer[4][2])==1:
                     self.DigiIO2.setStyleSheet("background-color: green") # update DigiIO for digital IO
                 else:
@@ -375,13 +386,13 @@ class WindowPlot(QMainWindow):
                 self.curve1.setData(X, Y1)
                 self.curve2.setData(X, Y2)
                 self.curve3.setData(X, Y3)
-            else:
-                datetimeObj = datetime.now()
-                self.LEDError.setStyleSheet("background-color: red")
-                errmsg = 'Error reading Buffer at:' +  str(datetimeObj)
-                self.errReadEvent = self.errReadEvent + errmsg + '\n'
-                self.label_ErrorReadEvents.setText(self.errReadEvent)
-                print(errmsg)
+            # else:
+            #     datetimeObj = datetime.now()
+            #     self.LEDError.setStyleSheet("background-color: red")
+            #     errmsg = 'Error reading Buffer at:' +  str(datetimeObj)
+            #     self.errReadEvent = self.errReadEvent + errmsg + '\n'
+            #     self.label_ErrorReadEvents.setText(self.errReadEvent)
+            #     print(errmsg)
 
 
         else:
@@ -391,28 +402,31 @@ class WindowPlot(QMainWindow):
             self.GetDataBtn.setText("Start Plot")
 
     def FiledataConvert(self):
-        def rdf():
+        # i = -1  # for an empty file, no lines to read 0 is first line
+        # with open("com", "r") as fl:
+        #     for i, l in enumerate(fl):
+        #         pass
+        fcm = open("com", "r")
+        cm = fcm.read()
+        fcm.close()
+        cm = cm.rstrip()
+
+        if cm == "True":
             f = open("output1.txt", "r")
             dt = f.read()
             f.close()
             dt = dt.split("-")
             for index, line in enumerate(dt):
                 dt[index] = line.split(':')
-            return dt
-
-        a = rdf()
-        # if len((a)[0][0])==0:
-        #     datetimeObj = datetime.now()
-        #     print('Error at :' + str(datetimeObj))
-        #     self.LEDError.setStyleSheet("background-color: red")
-        #     self.errReadEvent = self.errReadEvent + 'Error reading Data at:' +  str(datetimeObj) + '\n'
-        #     self.label_ErrorReadEvents.setText(self.errReadEvent)
-        #     time.sleep(3)
-        #     a = rdf()
-        # a = round(int(a)/204, 3)
-        self.LEDError.setStyleSheet("background-color: blue")
-        return a
-
+            # return dt
+            # a = rdf()
+            self.LEDError.setStyleSheet("background-color: blue")
+            f = open("com", "w").close()    # clear ready for read buffer
+            return dt #a
+        elif cm == "Wait":
+            return 1
+        else:
+            return 0
 
     def ticker(self):
         datetimeObj = datetime.now()
@@ -440,6 +454,7 @@ class Main_Window(QWidget):
         super().__init__()
 
         self.RNDbtn = False
+        self.init_data = False    # clear received data from buffer(output1.txt) before starting
         self.InitWindow()
 
 
@@ -493,6 +508,9 @@ class Main_Window(QWidget):
         button1.clicked.connect(self.SDisconnect)
         hboxlayout.addWidget(button1)
         hboxlayout.addStretch(1)
+
+        cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
+        os.system(cmd)   # kill the process at the port 65432 if the application was closed unexpectedly
 
         button2 = QPushButton("Quit")
         button2.setIcon(QtGui.QIcon("Quit.png"))
@@ -606,6 +624,17 @@ class Main_Window(QWidget):
         self.groupBox_servE.setLayout(self.hboxlayout_serverE)
 
 
+
+    def initCom(self):
+        if self.init_data == False:
+            def iniAll(f):
+                f = open(f, "w").close()    # clear data buffer init
+
+            iniAll("output.txt")    # clear server events
+            iniAll("output1.txt")   # clear data buffer
+            iniAll("com")           # clear server-client feedback file
+            self.init_data = True
+
     def ChooseIP(self):
         dlg = getIP_List_func.FindAdapter(self)
         if dlg.exec_():
@@ -615,6 +644,7 @@ class Main_Window(QWidget):
             self.ServerIP.setText(self.IPSel)
 
     def SConnect(self):
+        self.initCom()
         global ServerStatus
         ServerStatus = True
         print("Server is running")
@@ -632,12 +662,14 @@ class Main_Window(QWidget):
 
     def SDisconnect(self):
         global ServerStatus
+        if ServerStatus == True:
+            self.timer.stop()
+            self.label_servE.setText("Server Disconnected")
+            print("Server Disconnected")
         ServerStatus = False
         cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
         os.system(cmd)
-        self.timer.stop()
-        self.label_servE.setText("Server Disconnected")
-        print("Server Disconnected")
+
 
     def Refresher(self):
         f = open("output.txt", "r")
