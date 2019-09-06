@@ -494,6 +494,9 @@ class Main_Window(QWidget):
         hboxlayout.addWidget(button1)
         hboxlayout.addStretch(1)
 
+        cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| find "65432"\') do taskkill /t /f /pid %a'
+        os.system(cmd)   # kill the process at the port 65432 if the application was closed unexpectedly
+
         button2 = QPushButton("Quit")
         button2.setIcon(QtGui.QIcon("Quit.png"))
         button2.setIconSize(QtCore.QSize(40,40))
